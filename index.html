@@ -1,0 +1,2799 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MJ SMT 编程工作台</title>
+<style>
+:root,[data-theme="light"]{
+  --bg:#e9edf4; --bg2:#f7f9fc; --bg3:#edf1f7; --panel:#ffffff; --panel2:#ffffff;
+  --line:#d8dfea; --txt:#2c3444; --dim:#7c8698; --mut:#9aa4b6;
+  --acc:#2f7bff; --acc2:#1fae6b; --warn:#e8930c; --bad:#e05252; --badtx:#d43a3a;
+  --btn:#ffffff; --btn-h:#eaf2ff; --inp:#f3f6fa; --th:#edf1f7; --sel:#cfe2ff; --rowon:#e6efff;
+  --grad:linear-gradient(90deg,#2b6bff 0%,#1d9bf0 55%,#17b8d8 100%);
+  --shadow:0 10px 26px rgba(35,60,110,.16); --maskbg:rgba(28,42,70,.45); --sbar:#c2ccd9; --ok:#1d9e5f;
+}
+[data-theme="dark"]{
+  --bg:#101218; --bg2:#171a21; --bg3:#1f232d; --panel:#1b1e26; --panel2:#22252f;
+  --line:#333845; --txt:#dde1ea; --dim:#9aa3b5; --mut:#6d7688;
+  --acc:#3d8bff; --acc2:#2fbf71; --warn:#f0a13c; --bad:#e05252; --badtx:#ff9a9a;
+  --btn:#262a35; --btn-h:#313745; --inp:#14161c; --th:#232733; --sel:#2c4a7d; --rowon:#2b3040;
+  --grad:linear-gradient(90deg,#1e3a8a 0%,#2563eb 55%,#0e7ea6 100%);
+  --shadow:0 10px 26px rgba(0,0,0,.5); --maskbg:rgba(0,0,0,.55); --sbar:#45454f; --ok:#8fd0a8;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{background:var(--bg); color:var(--txt); font:13px/1.45 "Microsoft YaHei","PingFang SC",sans-serif; overflow:hidden; user-select:none;}
+button{background:var(--btn); color:var(--txt); border:1px solid var(--line); border-radius:7px; padding:3px 10px; cursor:pointer; font-size:12px; white-space:nowrap;}
+button:hover{background:var(--btn-h);}
+button.acc{background:linear-gradient(135deg,#2f7bff,#17a8e0); border-color:transparent; color:#fff;}
+button.acc:hover{filter:brightness(1.08);}
+button.grn{background:var(--acc2); border-color:var(--acc2); color:#fff;}
+button.org{background:#e07f1f; border-color:#e07f1f; color:#fff;}
+button:disabled{opacity:.45; cursor:default;}
+input,select,textarea{background:var(--inp); color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:3px 6px; font-size:12px;}
+input[type=number]{width:74px;}
+textarea{width:100%; min-height:90px; font-family:Consolas,monospace;}
+table{border-collapse:collapse; width:100%; font-size:12px;}
+th,td{border-bottom:1px solid var(--line); padding:2px 5px; text-align:left; white-space:nowrap; overflow:hidden; max-width:170px; text-overflow:ellipsis;}
+th{background:var(--th); color:var(--dim); font-weight:normal; position:sticky; top:0;}
+tr.sel td{background:var(--sel);}
+tr.bad td{color:var(--badtx);}
+::-webkit-scrollbar{width:9px;height:9px;} ::-webkit-scrollbar-thumb{background:var(--sbar);border-radius:4px;} ::-webkit-scrollbar-track{background:transparent;}
+
+#app{display:flex; flex-direction:column; height:100vh;}
+#titlebar{height:38px; background:var(--grad); color:#fff; display:flex; align-items:center; padding:0 10px; gap:10px; flex:none;}
+#titlebar .logo{background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.45); color:#fff; font-weight:800; font-size:15px; letter-spacing:1px; padding:1px 8px; border-radius:8px;}
+#titlebar .appname{font-weight:700; font-size:13px; color:#fff;}
+#titlebar .ttl{color:rgba(255,255,255,.78);}
+#titlebar .tsp{flex:1;}
+#themeToggle{position:relative; width:56px; height:26px; flex:none; padding:0; border-radius:999px; background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.55); cursor:pointer;}
+#themeToggle:hover{background:rgba(255,255,255,.3);}
+#themeToggle svg{position:absolute; top:50%; transform:translateY(-50%); width:14px; height:14px; pointer-events:none;}
+#themeToggle .ic-sun{left:6px;}
+#themeToggle .ic-moon{right:6px;}
+#themeToggle .tk{position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.35); transition:left .18s ease; pointer-events:none;}
+[data-theme="dark"] #themeToggle .tk{left:32px;}
+#main{flex:1; display:flex; min-height:0;}
+
+/* 左模块栏 */
+#modbar{width:86px; background:var(--bg2); border-right:1px solid var(--line); display:flex; flex-direction:column; padding:6px 0;}
+#modbar .mod{padding:9px 4px; margin:1px 6px; border-radius:10px; text-align:center; cursor:pointer; color:var(--dim); font-size:12px; display:flex; flex-direction:column; align-items:center; gap:2px;}
+#modbar .mod::before{font-size:17px; line-height:1.15; color:var(--mc,#8a94a6);}
+#modbar .mod[data-mod="smt"]{--mc:#2f7bff;} #modbar .mod[data-mod="smt"]::before{content:"▣";}
+#modbar .mod[data-mod="bomcad"]{--mc:#0fb5a3;} #modbar .mod[data-mod="bomcad"]::before{content:"▦";}
+#modbar .mod[data-mod="simplify"]{--mc:#f08c1a;} #modbar .mod[data-mod="simplify"]::before{content:"≣";}
+#modbar .mod[data-mod="compare"]{--mc:#8b5cf6;} #modbar .mod[data-mod="compare"]::before{content:"◧";}
+#modbar .mod[data-mod="customer"]{--mc:#ec4899;} #modbar .mod[data-mod="customer"]::before{content:"✦";}
+#modbar .mod[data-mod="fixture"]{--mc:#06a8c9;} #modbar .mod[data-mod="fixture"]::before{content:"⬢";}
+#modbar .mod[data-mod="reflow"]{--mc:#ef4444;} #modbar .mod[data-mod="reflow"]::before{content:"∿";}
+#modbar .mod[data-mod="annotate"]{--mc:#22a06b;} #modbar .mod[data-mod="annotate"]::before{content:"✎";}
+#modbar .mod[data-mod="settings"]{--mc:#64748b;} #modbar .mod[data-mod="settings"]::before{content:"⚙";}
+#modbar #modExit{--mc:#e05252;} #modbar #modExit::before{content:"⏻";}
+#modbar .mod:hover{color:var(--txt); background:var(--btn-h);}
+#modbar .mod.on{color:#fff; background:linear-gradient(135deg,#2f7bff,#17a8e0);}
+#modbar .mod.on::before{color:#fff;}
+#modbar .sp{flex:1;}
+
+/* 中列 */
+#center{flex:1; display:flex; flex-direction:column; min-width:0;}
+#menubar{height:30px; background:var(--bg2); display:flex; align-items:center; padding:0 6px; gap:2px; border-bottom:1px solid var(--line); position:relative; z-index:60;}
+.menu{padding:3px 10px; cursor:pointer; border-radius:6px;}
+.menu:hover,.menu.open{background:var(--btn-h);}
+.dropdown{position:absolute; top:30px; background:var(--panel2); border:1px solid var(--line); border-radius:9px; min-width:210px; box-shadow:var(--shadow); padding:4px 0; display:none; z-index:100;}
+.dropdown.open{display:block;}
+.dropdown .mi{padding:5px 14px; cursor:pointer; display:flex; justify-content:space-between; gap:18px;}
+.dropdown .mi:hover{background:var(--acc); color:#fff;}
+.dropdown .mi.dis{color:var(--mut); cursor:default;}
+.dropdown .mi.dis:hover{background:transparent; color:var(--mut);}
+.dropdown .sep{height:1px; background:var(--line); margin:4px 0;}
+.dropdown .mi .k{color:var(--dim); font-size:11px;}
+.dropdown .mi:hover .k{color:#dbe7ff;}
+
+#toolbar{padding:5px 8px 3px; background:var(--bg2); border-bottom:1px solid var(--line);}
+#toolbar .row{display:flex; align-items:center; gap:5px; margin-bottom:4px; flex-wrap:wrap;}
+#toolbar .sep{width:1px; height:20px; background:var(--line); margin:0 3px;}
+#toolbar .grow{flex:1;}
+.tgl.on{background:var(--acc); color:#fff; border-color:var(--acc);}
+
+#canvaswrap{flex:1; position:relative; background:#0a0a0c; min-height:0;}
+#cv{position:absolute; inset:0; width:100%; height:100%; display:block; cursor:crosshair;}
+#canvasHint{position:absolute; left:8px; top:6px; color:#6d6e7a; font-size:11px; pointer-events:none;}
+#statusbar{height:24px; background:var(--bg2); border-top:1px solid var(--line); display:flex; align-items:center; gap:14px; padding:0 10px; font-size:12px; color:var(--dim); overflow:hidden; white-space:nowrap;}
+#statusbar b{color:var(--txt); font-weight:normal;}
+#statusMsg{color:var(--ok); flex:1; overflow:hidden; text-overflow:ellipsis;}
+
+/* 右侧 */
+#right{width:400px; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0;}
+#tabs{display:flex; background:var(--bg2); border-bottom:1px solid var(--line); padding:3px 4px; gap:2px;}
+#tabs .tab{padding:5px 10px; cursor:pointer; color:var(--dim); border-radius:8px; font-size:12px;}
+#tabs .tab.on{color:#fff; background:linear-gradient(135deg,#2f7bff,#17a8e0);}
+#tabbody{flex:1; overflow:auto; padding:7px; min-height:0;}
+#layerpanel{border-top:1px solid var(--line); max-height:238px; display:flex; flex-direction:column; background:var(--panel);}
+#layerpanel .lp-head{display:flex; align-items:center; gap:4px; padding:5px 7px; background:var(--bg2); font-size:12px;}
+#layerlist{overflow:auto;}
+.lrow{display:flex; align-items:center; gap:5px; padding:3px 7px; cursor:pointer; font-size:12px;}
+.lrow.on{background:var(--rowon);}
+.lrow .sw{width:12px; height:12px; border-radius:2px; border:1px solid rgba(0,0,0,.25); flex:none;}
+.lrow .nm{flex:1; overflow:hidden; text-overflow:ellipsis;}
+.lrow .cnt{color:var(--dim);}
+.lrow.err .nm{color:var(--badtx);}
+#readout{padding:5px 8px; border-top:1px solid var(--line); font-size:12px; color:var(--dim); display:grid; grid-template-columns:1fr 1fr; gap:2px 10px;}
+#readout b{color:var(--txt); font-weight:normal;}
+
+.sec{margin-bottom:10px;}
+.sec>h4{font-size:12px; color:var(--dim); font-weight:normal; margin-bottom:5px; border-bottom:1px solid var(--line); padding-bottom:3px;}
+.kv{display:grid; grid-template-columns:auto 1fr auto 1fr; gap:4px 6px; align-items:center; margin-bottom:5px;}
+.kv2{display:grid; grid-template-columns:auto 1fr; gap:4px 6px; align-items:center; margin-bottom:5px;}
+.btnrow{display:flex; gap:5px; flex-wrap:wrap; margin:5px 0;}
+.note{color:var(--dim); font-size:11px;}
+.tag{display:inline-block; padding:0 5px; border-radius:8px; font-size:11px; background:var(--bg3); color:var(--dim);}
+.tag.g{background:#1fae6b; color:#fff;} .tag.r{background:#e05252; color:#fff;} .tag.y{background:#e8930c; color:#fff;}
+.pill{font-size:11px; color:var(--dim);}
+
+/* 模态 */
+.mask{position:fixed; inset:0; background:var(--maskbg); display:none; z-index:200; align-items:center; justify-content:center;}
+.mask.open{display:flex;}
+.dlg{background:var(--panel2); border:1px solid var(--line); border-radius:12px; width:860px; max-width:96vw; max-height:92vh; display:flex; flex-direction:column; box-shadow:var(--shadow);}
+.dlg.wide{width:1060px;}
+.dlg .dh{padding:9px 13px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; font-size:13px;}
+.dlg .db{padding:10px 13px; overflow:auto;}
+.dlg .df{padding:9px 13px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:6px;}
+.x{cursor:pointer; color:var(--dim); padding:0 4px;} .x:hover{color:var(--txt);}
+
+/* 模块覆盖视图（BOM整理等） */
+#moduleView{position:absolute; inset:0; background:var(--bg); display:none; flex-direction:column; z-index:40;}
+#moduleView.open{display:flex;}
+#moduleView .mv-head{padding:8px 12px; background:var(--bg2); border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center;}
+#moduleView .mv-body{flex:1; overflow:auto; padding:10px 12px;}
+.split{display:flex; gap:12px;} .split>div{flex:1; min-width:0;}
+.ctxmenu{position:fixed; background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:4px 0; z-index:300; min-width:180px; box-shadow:var(--shadow); display:none;}
+.ctxmenu .mi{padding:5px 14px; cursor:pointer;} .ctxmenu .mi:hover{background:var(--acc); color:#fff;}
+#toast{position:fixed; left:50%; bottom:38px; transform:translateX(-50%); background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:7px 16px; border-radius:8px; z-index:400; display:none; max-width:80vw; box-shadow:var(--shadow);}
+.stat3{display:flex; gap:14px; margin:6px 0;}
+.stat3 div{background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:6px 12px;}
+.stat3 b{font-size:16px; display:block;}
+/* 处理明细 8 步流程条 */
+.flowbar{display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin:4px 0 10px;}
+.flowbar .fst{padding:5px 12px; border-radius:12px; border:1px solid var(--line); background:var(--bg3); color:var(--mut); font-size:12px;}
+.flowbar .fst.done{background:#1fae6b; border-color:#1fae6b; color:#fff;}
+.flowbar .fst.cur{background:linear-gradient(135deg,#2f7bff,#17a8e0); border-color:transparent; color:#fff;}
+.flowbar .farr{color:var(--mut);}
+/* 丝印识别进度窗（居中模态） */
+#silkProg{position:fixed; inset:0; background:var(--maskbg); z-index:500; display:flex; align-items:center; justify-content:center;}
+#silkProg .sp-box{background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:18px 22px; width:430px; max-width:92vw; box-shadow:var(--shadow);}
+#silkProg .sp-bar{height:12px; background:var(--inp); border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:10px 0 4px;}
+#silkProg .sp-fill{height:100%; background:linear-gradient(90deg,#2f7bff,#17b8d8); width:0%; transition:width .15s;}
+</style>
+<script>try{var _t=localStorage.getItem("mj-theme");if(_t==="dark"||_t==="light")document.documentElement.setAttribute("data-theme",_t);}catch(e){}</script>
+</head>
+<body>
+<div id="app">
+  <div id="titlebar"><span class="logo">MJ</span><span class="appname">SMT 编程工作台</span><span class="ttl" id="projName">未命名工程</span><span class="ttl" id="saveState"></span><span class="tsp"></span><button id="themeToggle" title="切换浅色 / 深色主题" aria-label="切换浅色 / 深色主题"><svg class="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="#FFC93C"/><g stroke="#FFC93C" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3L19 19M19 5l-1.7 1.7M6.7 17.3L5 19"/></g></svg><svg class="ic-moon" viewBox="0 0 24 24"><path d="M20.6 14.5A8.8 8.8 0 1 1 9.5 3.4a7.2 7.2 0 0 0 11.1 11.1z" fill="#CFE4FF"/></svg><span class="tk"></span></button></div>
+  <div id="main">
+    <div id="modbar">
+      <div class="mod on" data-mod="smt">SMT编程</div>
+      <div class="mod" data-mod="bomcad">BOM+CAD</div>
+      <div class="mod" data-mod="simplify">BOM整理</div>
+      <div class="mod" data-mod="compare">BOM比对</div>
+      <div class="mod" data-mod="customer">客户方案</div>
+      <div class="mod" data-mod="fixture">治具生成</div>
+      <div class="mod" data-mod="reflow">回流焊推荐</div>
+      <div class="mod" data-mod="annotate">图片标注</div>
+      <div class="sp"></div>
+      <div class="mod" data-mod="settings">设置</div>
+      <div class="mod" id="modExit">退出</div>
+    </div>
+    <div id="center">
+      <div id="menubar">
+        <div class="menu" data-menu="file">文件</div>
+        <div class="menu" data-menu="view">视图</div>
+        <div class="menu" data-menu="coord">坐标操作</div>
+        <div class="menu" data-menu="db">数据库</div>
+        <div class="menu" data-menu="help">帮助</div>
+        <div class="dropdown" id="dd"></div>
+      </div>
+      <div id="toolbar">
+        <div class="row">
+          <button id="tbGerber" class="acc">导入Gerber</button>
+          <button id="tbAlign">智能重合</button>
+          <button id="tbExtract" class="tgl on">坐标提取</button>
+          <button id="tbFindSame">查找相同</button>
+          <button id="tbRange" class="tgl">提取范围</button>
+          <button id="tbSilk">丝印识别</button>
+          <span class="sep"></span>
+          <button id="tbCad">导入CAD</button>
+          <button id="tbMerge">合并BOM</button>
+          <button id="tbAngle">角度校正</button>
+          <button id="tbPkg">封装检查</button>
+          <button id="tbPanel">智能拼板</button>
+          <span class="sep"></span>
+          <button id="tbStencil">钢网▾</button>
+        </div>
+        <div class="row">
+          <button id="tbSample" class="grn">载入样例工程</button>
+          <span class="sep"></span>
+          <span class="grow"></span>
+          <button id="tbReadProg">读取程序▾</button>
+          <button id="tbOutput">输出程序▾</button>
+          <button id="tbConvert">转换坐标</button>
+          <button id="tbRotate">旋转</button>
+          <button id="tbMirror">镜像</button>
+          <span class="sep"></span>
+          <span class="pill">面别</span>
+          <button id="tbSide" class="tgl on">T</button>
+        </div>
+      </div>
+      <div id="canvaswrap">
+        <canvas id="cv"></canvas>
+        <div id="canvasHint">左键点选/框选 · 右键提取并写位号 · 滚轮缩放 · 中键/空格拖动平移</div>
+        <div id="moduleView">
+          <div class="mv-head"><b id="mvTitle">模块</b><span class="grow" style="flex:1"></span><button id="mvClose">返回 SMT 编程</button></div>
+          <div class="mv-body" id="mvBody"></div>
+        </div>
+      </div>
+      <div id="statusbar">
+        <span>图层 <b id="stLayer">-</b></span>
+        <span>X <b id="stX">0.000</b></span>
+        <span>Y <b id="stY">0.000</b></span>
+        <span>缩放 <b id="stZoom">100%</b></span>
+        <span>选中 <b id="stSel">0</b></span>
+        <span>坐标总数 <b id="stCoords">0</b></span>
+        <span id="statusMsg"></span>
+        <span id="stTime"></span>
+      </div>
+    </div>
+    <div id="right">
+      <div id="tabs">
+        <div class="tab on" data-tab="place">贴片数据</div>
+        <div class="tab" data-tab="board">基板数据</div>
+        <div class="tab" data-tab="comp">元件数据</div>
+        <div class="tab" data-tab="feeder">站位表</div>
+        <div class="tab" data-tab="cfg">设置</div>
+      </div>
+      <div id="tabbody"></div>
+      <div id="layerpanel">
+        <div class="lp-head"><b>坐标层</b><span style="flex:1"></span>
+          <button id="lpAdd" title="添加空层">＋层</button>
+          <button id="lpUp" title="上移层序">↑</button>
+          <button id="lpDown" title="下移层序">↓</button>
+          <button id="lpFlip" title="层翻转（镜像生成对面层）">翻转</button>
+          <button id="lpMerge" title="层合并导出 Gerber">合并</button>
+          <button id="lpDel" title="删除层">删</button>
+        </div>
+        <div id="layerlist"></div>
+        <div id="readout">
+          <span>当前坐标 <b id="roCur">-</b></span>
+          <span>元件中心 <b id="roCenter">-</b></span>
+          <span>测量 <b id="roMeas">-</b></span>
+          <span>计算角度 <b id="roAng">-</b></span>
+          <span>焊盘内间距 <b id="roGap">-</b></span>
+          <span><button id="btnMeasure" class="tgl">测量模式</button></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 通用弹窗 -->
+<div class="mask" id="mask"><div class="dlg" id="dlg">
+  <div class="dh"><span id="dlgTitle">对话框</span><span class="x" id="dlgX">✕</span></div>
+  <div class="db" id="dlgBody"></div>
+  <div class="df" id="dlgFoot"></div>
+</div></div>
+
+<div class="ctxmenu" id="ctxmenu"></div>
+<div id="toast"></div>
+<input type="file" id="fileGerber" multiple accept=".gtp,.gts,.gto,.gtl,.gko,.gbl,.gbs,.gbo,.gbp,.ger,.gbr,.drl,.zip" style="display:none">
+<input type="file" id="fileZip" accept=".zip" style="display:none">
+<input type="file" id="fileCad" accept=".csv,.txt" style="display:none">
+<input type="file" id="fileBom" accept=".xlsx,.csv,.txt" style="display:none">
+<input type="file" id="fileBom2" accept=".xlsx,.csv,.txt" style="display:none">
+<input type="file" id="fileProj" accept=".json" style="display:none">
+<input type="file" id="filePcb" accept=".PcbDoc,.pcbdoc" style="display:none">
+
+<script id="core">
+"use strict";
+/* ============================================================
+   MJ SMT 工作台 — 纯逻辑核心（不碰 DOM，Node 可提取运行）
+   ============================================================ */
+const Core = (() => {
+
+/* ---------- 工具 ---------- */
+const round3 = v => Math.round(v * 1000) / 1000;
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function bboxOf(pts) {
+  let x0 = 1e18, y0 = 1e18, x1 = -1e18, y1 = -1e18;
+  for (const p of pts) { if (p.x < x0) x0 = p.x; if (p.y < y0) y0 = p.y; if (p.x > x1) x1 = p.x; if (p.y > y1) y1 = p.y; }
+  return { x0, y0, x1, y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 };
+}
+function primBBox(p) {
+  if (p.k === 'f' || p.k === 't') return { x0: p.x - p.w / 2, y0: p.y - p.h / 2, x1: p.x + p.w / 2, y1: p.y + p.h / 2, cx: p.x, cy: p.y, w: p.w, h: p.h };
+  if (p.k === 'h') return { x0: p.x - p.d / 2, y0: p.y - p.d / 2, x1: p.x + p.d / 2, y1: p.y + p.d / 2, cx: p.x, cy: p.y, w: p.d, h: p.d };
+  if (p.k === 'l') return bboxOf([{ x: p.x1, y: p.y1 }, { x: p.x2, y: p.y2 }]);
+  if (p.k === 'r') return bboxOf(p.pts);
+  return { x0: 0, y0: 0, x1: 0, y1: 0, cx: 0, cy: 0, w: 0, h: 0 };
+}
+function primCenter(p) { const b = primBBox(p); return { x: b.cx, y: b.cy }; }
+
+/* ---------- CRC32（ZIP/XLSX 自写读写用） ---------- */
+const CRC_TABLE = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; } return t; })();
+function crc32(bytes) { let c = 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+/* ---------- 最小 ZIP 读取（stored / deflate） ----------
+   inflateRaw 由宿主注入：浏览器用 DecompressionStream('deflate-raw')，
+   Node 测试用 zlib.inflateRawSync 包一层 async。 */
+let inflateRaw = null;
+function setInflater(fn) { inflateRaw = fn; }
+async function defaultInflate(bytes) {
+  if (typeof DecompressionStream !== 'undefined') {
+    const ds = new DecompressionStream('deflate-raw');
+    const buf = await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer();
+    return new Uint8Array(buf);
+  }
+  throw new Error('当前环境无 DecompressionStream，需宿主注入 inflateRaw');
+}
+async function unzip(bytes) {
+  const inflate = inflateRaw || defaultInflate;
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 66000); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('不是有效的 ZIP 文件（找不到中央目录）');
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  const out = [];
+  const dec = new TextDecoder('utf-8');
+  for (let n = 0; n < count; n++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    const method = dv.getUint16(off + 10, true);
+    const csize = dv.getUint32(off + 20, true);
+    const nlen = dv.getUint16(off + 28, true), elen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true);
+    const lho = dv.getUint32(off + 42, true);
+    const name = dec.decode(bytes.subarray(off + 46, off + 46 + nlen));
+    const lnlen = dv.getUint16(lho + 26, true), lelen = dv.getUint16(lho + 28, true);
+    const dataOff = lho + 30 + lnlen + lelen;
+    const raw = bytes.subarray(dataOff, dataOff + csize);
+    let data;
+    if (method === 0) data = raw.slice();
+    else if (method === 8) data = await inflate(raw);
+    else throw new Error('ZIP 条目 ' + name + ' 使用了不支持的压缩方式 ' + method);
+    out.push({ name, data });
+    off += 46 + nlen + elen + clen;
+  }
+  return out;
+}
+/* 最小 ZIP 写入（stored，供自造样例 xlsx / 测试用） */
+function zipStore(files) {
+  const enc = new TextEncoder(); const chunks = []; const central = []; let off = 0;
+  for (const f of files) {
+    const nameB = enc.encode(f.name); const data = f.data; const crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(8, 0, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, nameB.length, true);
+    chunks.push(new Uint8Array(lh.buffer), nameB, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(10, 0, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, nameB.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), nameB);
+    off += 30 + nameB.length + data.length;
+  }
+  const cdSize = central.reduce((s, c) => s + c.length, 0);
+  const eo = new DataView(new ArrayBuffer(22));
+  eo.setUint32(0, 0x06054b50, true); eo.setUint16(8, files.length, true); eo.setUint16(10, files.length, true);
+  eo.setUint32(12, cdSize, true); eo.setUint32(16, off, true);
+  const all = [...chunks, ...central, new Uint8Array(eo.buffer)];
+  const total = all.reduce((s, c) => s + c.length, 0); const res = new Uint8Array(total);
+  let p = 0; for (const c of all) { res.set(c, p); p += c.length; }
+  return res;
+}
+
+/* ---------- 最小 XLSX 读取（zip + sharedStrings + 首个 sheet） ---------- */
+function xmlUnescape(s) { return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&'); }
+async function parseXLSX(bytes) {
+  const files = await unzip(bytes);
+  const dec = new TextDecoder('utf-8');
+  const byName = {}; for (const f of files) byName[f.name.replace(/^\.\//, '')] = dec.decode(f.data);
+  let shared = [];
+  const ssXml = byName['xl/sharedStrings.xml'];
+  if (ssXml) {
+    shared = [...ssXml.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m =>
+      [...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(t => xmlUnescape(t[1])).join(''));
+  }
+  const sheetName = Object.keys(byName).find(n => /xl\/worksheets\/sheet\d+\.xml$/.test(n)) || 'xl/worksheets/sheet1.xml';
+  const sheetXml = byName[sheetName];
+  if (!sheetXml) throw new Error('xlsx 里找不到工作表');
+  const rows = [];
+  for (const rm of sheetXml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)) {
+    const cells = {}; let maxC = -1;
+    for (const cm of rm[1].matchAll(/<c\s+r="([A-Z]+)\d+"([^>]*)>([\s\S]*?)<\/c>|<c\s+r="([A-Z]+)\d+"([^>]*)\/>/g)) {
+      const ref = cm[1] || cm[4]; const attrs = (cm[2] || cm[5] || ''); const inner = cm[3] || '';
+      let col = 0; for (const ch of ref) col = col * 26 + (ch.charCodeAt(0) - 64);
+      col -= 1;
+      let val = '';
+      const vm = inner.match(/<v>([\s\S]*?)<\/v>/); const im = inner.match(/<is>[\s\S]*?<t[^>]*>([\s\S]*?)<\/t>[\s\S]*?<\/is>/);
+      if (/t="s"/.test(attrs) && vm) val = shared[parseInt(vm[1], 10)] ?? '';
+      else if (im) val = xmlUnescape(im[1]);
+      else if (vm) val = xmlUnescape(vm[1]);
+      cells[col] = val; if (col > maxC) maxC = col;
+    }
+    const row = []; for (let i = 0; i <= maxC; i++) row.push(cells[i] ?? '');
+    rows.push(row);
+  }
+  return rows;
+}
+/* 造一个最小可读 xlsx（字符串全走 sharedStrings） */
+function buildXLSX(rows) {
+  const enc = new TextEncoder();
+  const shared = []; const sidx = new Map();
+  const sref = v => { const s = String(v ?? ''); if (!sidx.has(s)) { sidx.set(s, shared.length); shared.push(s); } return sidx.get(s); };
+  const colName = i => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = (i - 1 - m) / 26; } return s; };
+  let sheet = '<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  rows.forEach((r, ri) => {
+    sheet += `<row r="${ri + 1}">`;
+    r.forEach((v, ci) => { if (v !== '' && v != null) sheet += `<c r="${colName(ci)}${ri + 1}" t="s"><v>${sref(v)}</v></c>`; });
+    sheet += '</row>';
+  });
+  sheet += '</sheetData></worksheet>';
+  const ss = '<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' + shared.length + '" uniqueCount="' + shared.length + '">' +
+    shared.map(s => '<si><t>' + s.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</t></si>').join('') + '</sst>';
+  const wb = '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets><sheet name="Sheet1" sheetId="1"/></sheets></workbook>';
+  const ct = '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>';
+  return zipStore([
+    { name: '[Content_Types].xml', data: enc.encode(ct) },
+    { name: 'xl/workbook.xml', data: enc.encode(wb) },
+    { name: 'xl/worksheets/sheet1.xml', data: enc.encode(sheet) },
+    { name: 'xl/sharedStrings.xml', data: enc.encode(ss) },
+  ]);
+}
+
+/* ---------- 图层分类（R1） ---------- */
+function classifyLayer(fileName) {
+  const n = fileName.toLowerCase();
+  const ext = (n.match(/\.([a-z0-9]+)$/) || [])[1] || '';
+  const map = {
+    gtp: ['paste', 'T'], gbp: ['paste', 'B'], gts: ['solder', 'T'], gbs: ['solder', 'B'],
+    gto: ['silk', 'T'], gbo: ['silk', 'B'], gtl: ['copper', 'T'], gbl: ['copper', 'B'],
+    gko: ['outline', '-'], drl: ['drill', '-'], gbr: ['unknown', '-'], ger: ['unknown', '-'],
+  };
+  if (map[ext]) return { kind: map[ext][0], side: map[ext][1] };
+  if (/paste|锡膏|钢网/.test(n)) return { kind: 'paste', side: /bot|bottom|_b/.test(n) ? 'B' : 'T' };
+  if (/silk|丝印/.test(n)) return { kind: 'silk', side: /bot|bottom|_b/.test(n) ? 'B' : 'T' };
+  if (/mask|阻焊/.test(n)) return { kind: 'solder', side: /bot|bottom|_b/.test(n) ? 'B' : 'T' };
+  if (/outline|keepout|板框/.test(n)) return { kind: 'outline', side: '-' };
+  return { kind: 'unknown', side: '-' };
+}
+const KIND_CN = { paste: '锡膏', solder: '阻焊', silk: '丝印', copper: '线路', outline: '板框', drill: '钻孔', glue: '红胶', unknown: '未分类' };
+const KIND_COLOR = { paste: '#39d353', solder: '#2f9e6e', silk: '#e8e8e8', copper: '#c9a227', outline: '#ff7847', drill: '#9a9ba6', glue: '#e5484d', unknown: '#7a7b88' };
+
+/* ---------- Gerber 解析（R2，RS-274X 常用子集） ---------- */
+function parseGerber(text, fileName) {
+  const prims = []; const errors = [];
+  let intDX = 2, decDX = 4, intDY = 2, decDY = 4, zeroOmit = 'L', unit = 1; // unit: mm 倍率
+  const apertures = {}; let curAp = null, curX = 0, curY = 0, interp = 'G01', region = false, regionPts = [], polarity = 'D';
+  const coordVal = (s, isY) => {
+    if (s == null || s === '') return null;
+    let neg = false; if (s[0] === '-') { neg = true; s = s.slice(1); } else if (s[0] === '+') s = s.slice(1);
+    const intD = isY ? intDY : intDX, decD = isY ? decDY : decDX;
+    if (zeroOmit === 'L') s = s.padStart(intD + decD, '0');
+    else if (zeroOmit === 'T') s = s.padEnd(intD + decD, '0');
+    const v = parseInt(s, 10) / Math.pow(10, decD);
+    return (neg ? -v : v) * unit;
+  };
+  const flushRegion = () => {
+    if (regionPts.length >= 3) prims.push({ k: 'r', pts: regionPts.map(p => ({ x: round3(p.x), y: round3(p.y) })), pol: polarity });
+    regionPts = [];
+  };
+  const tokens = text.replace(/\r/g, '').split(/(%[^%]*%)/).flatMap(part => {
+    if (part.startsWith('%')) return [part];
+    return part.split('*').filter(s => s.trim() !== '').map(s => s + '*');
+  });
+  for (let tok of tokens) {
+    tok = tok.trim(); if (!tok) continue;
+    if (tok.startsWith('%')) {
+      const body = tok.slice(1, -1).replace(/\*$/, '');
+      let m;
+      if ((m = body.match(/^FS([LT])([AI])X(\d)(\d)Y(\d)(\d)/))) { zeroOmit = m[1]; intDX = +m[3]; decDX = +m[4]; intDY = +m[5]; decDY = +m[6]; }
+      else if (body.startsWith('MOIN')) unit = 25.4;
+      else if (body.startsWith('MOMM')) unit = 1;
+      else if ((m = body.match(/^AD(D\d+)([A-Za-z][A-Za-z0-9_]*),?(.*)$/))) {
+        const code = m[1], shape = m[2], params = (m[3] || '').split('X').map(Number);
+        if (shape === 'C') apertures[code] = { shape, w: (params[0] || 0) * unit, h: (params[0] || 0) * unit };
+        else if (shape === 'R' || shape === 'O') apertures[code] = { shape, w: (params[0] || 0) * unit, h: (params[1] ?? params[0] ?? 0) * unit };
+        else if (shape === 'P') apertures[code] = { shape: 'C', w: (params[0] || 0) * unit, h: (params[0] || 0) * unit };
+        else apertures[code] = { shape: 'R', w: (params[0] || 0) * unit, h: (params[1] ?? params[0] ?? 0) * unit, macro: true }; // 宏孔径：以前两参数作外形尺寸近似（常见 21 号矩形原语），形状细节不还原
+      }
+      else if ((m = body.match(/^LP([DC])/))) polarity = m[1];
+      else if (body.startsWith('AM') || body.startsWith('AB') || body.startsWith('SR')) { /* 宏/步进重复：本期跳过 */ }
+      continue;
+    }
+    let cmd = tok.replace(/\*$/, '');
+    if (cmd.startsWith('G04')) continue;
+    let m;
+    if ((m = cmd.match(/^G(36|37)/))) { if (m[1] === '36') { region = true; regionPts = []; } else { flushRegion(); region = false; } continue; }
+    if ((m = cmd.match(/^G(01|02|03|1|2|3)(?![0-9])/))) interp = 'G0' + m[1].slice(-1);
+    if ((m = cmd.match(/^G54D(\d+)/)) || (m = cmd.match(/^(D\d{2,})$/)) && !/[XY]/.test(cmd)) { if (m) curAp = 'D' + (m[1].replace(/^D/, '')); continue; }
+    if ((m = cmd.match(/^D(\d+)$/))) { if (+m[1] >= 10) { curAp = 'D' + m[1]; continue; } }
+    const xm = cmd.match(/X(-?\d+)/), ym = cmd.match(/Y(-?\d+)/), dm = cmd.match(/D(0[123])$/);
+    if (xm || ym || dm) {
+      const nx = xm ? coordVal(xm[1], false) : curX, ny = ym ? coordVal(ym[1], true) : curY;
+      const op = dm ? dm[1] : '01';
+      if (region) {
+        if (op === '02') { flushRegion(); regionPts = [{ x: nx, y: ny }]; }
+        else regionPts.push({ x: nx, y: ny });
+      } else if (op === '01') {
+        const ap = apertures[curAp];
+        prims.push({ k: 'l', x1: round3(curX), y1: round3(curY), x2: round3(nx), y2: round3(ny), w: ap ? round3(ap.w) : 0.1, pol: polarity });
+      } else if (op === '03') {
+        const ap = apertures[curAp];
+        if (!ap) errors.push('D03 使用了未定义孔径 ' + curAp);
+        else prims.push({ k: 'f', shape: ap.shape, x: round3(nx), y: round3(ny), w: round3(ap.w), h: round3(ap.h), rot: 0, pol: polarity });
+      }
+      curX = nx; curY = ny;
+    }
+  }
+  flushRegion();
+  if (prims.length === 0 && errors.length === 0) errors.push('未解析出任何图元（格式可能超出支持子集）');
+  return { prims, errors };
+}
+/* Gerber 写出（R7 合并导出 / R37 钢网输出）：由图元生成 RS-274X 文本 */
+function writeGerber(prims, layerName) {
+  let out = '%FSLAX46Y46*%\n%MOMM*%\n';
+  const aps = new Map(); let apN = 10;
+  const apFor = (shape, w, h) => {
+    const key = shape + '|' + w.toFixed(3) + '|' + h.toFixed(3);
+    if (!aps.has(key)) { aps.set(key, 'D' + (apN++)); }
+    return aps.get(key);
+  };
+  const flashes = prims.filter(p => p.k === 'f'), lines = prims.filter(p => p.k === 'l'), regions = prims.filter(p => p.k === 'r');
+  for (const p of [...flashes, ...lines]) apFor(p.shape || 'C', p.w, p.h ?? p.w);
+  for (const [key, code] of aps) {
+    const [shape, w, h] = key.split('|');
+    if (shape === 'C') out += `%AD${code}C,${(+w).toFixed(4)}*%\n`;
+    else out += `%AD${code}${shape},${(+w).toFixed(4)}X${(+h).toFixed(4)}*%\n`;
+  }
+  const fmt = v => { const s = Math.round(v * 1e6).toString(); return (v < 0 ? '-' : '') + s.replace('-', '').padStart(7, '0'); };
+  let cur = '';
+  const useAp = code => { if (cur !== code) { out += 'G54' + code + '*\n'; cur = code; } };
+  for (const p of flashes) { useAp(apFor(p.shape, p.w, p.h)); out += `X${fmt(p.x)}Y${fmt(p.y)}D03*\n`; }
+  for (const p of lines) { useAp(apFor('C', p.w, p.w)); out += `X${fmt(p.x1)}Y${fmt(p.y1)}D02*\nX${fmt(p.x2)}Y${fmt(p.y2)}D01*\n`; }
+  for (const p of regions) { out += 'G36*\n'; p.pts.forEach((pt, i) => { out += `X${fmt(pt.x)}Y${fmt(pt.y)}${i === 0 ? 'D02' : 'D01'}*\n`; }); out += 'G37*\n'; }
+  out += 'M02*\n';
+  return out;
+}
+
+/* ---------- 钻孔解析（Excellon 子集） ---------- */
+function parseDrill(text) {
+  const prims = []; const tools = {}; let cur = null; let k = 1; // INCH 时坐标与孔径 ×25.4
+  /* Excellon 坐标多为无小数点的定点数，位数在文件头声明：EasyEDA 写 ;FILE_FORMAT=3:3，
+     标准头 METRIC,LZ,000.000 的模板同样给出小数位；旧版直接 parseFloat 把 32889 当成 mm，
+     真钻孔文件坐标放大约 1000 倍、视图被 phantom 孔位撑飞（真板实测）。 */
+  let intD = 3, decD = 3, zeroMode = 'LZ';
+  const fm = text.match(/FILE_FORMAT=(\d+):(\d+)/);
+  if (fm) { intD = +fm[1]; decD = +fm[2]; }
+  const coord = (s) => {
+    if (s.includes('.')) return parseFloat(s) * k;
+    let neg = false; if (s[0] === '-') { neg = true; s = s.slice(1); }
+    const padded = zeroMode === 'TZ' ? s.padEnd(intD + decD, '0') : s.padStart(intD + decD, '0');
+    return (neg ? -1 : 1) * (parseInt(padded, 10) / Math.pow(10, decD)) * k;
+  };
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim(); let m;
+    if (/^INCH/.test(line)) { k = 25.4; if (!fm) { intD = 2; decD = 4; } if (/TZ/.test(line)) zeroMode = 'TZ'; }
+    if (/^METRIC/.test(line)) { k = 1; if (/TZ/.test(line)) zeroMode = 'TZ'; const tpl = line.match(/0+\.(0+)/); if (tpl && !fm) decD = tpl[1].length; }
+    if ((m = line.match(/^T(\d+)C([\d.]+)/))) tools[m[1]] = round3(parseFloat(m[2]) * k);
+    else if ((m = line.match(/^T(\d+)$/))) cur = m[1];
+    else if ((m = line.match(/^X(-?[\d.]+)Y(-?[\d.]+)/)) && cur != null && tools[cur]) {
+      prims.push({ k: 'h', x: round3(coord(m[1])), y: round3(coord(m[2])), d: tools[cur] });
+    }
+  }
+  return { prims, errors: prims.length ? [] : ['钻孔文件未解析出孔位'] };
+}
+
+/* ---------- CSV 文本解析 ---------- */
+function parseCSVText(text) {
+  const rows = []; let row = [], cell = '', inQ = false;
+  const s = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inQ) { if (c === '"') { if (s[i + 1] === '"') { cell += '"'; i++; } else inQ = false; } else cell += c; }
+    else if (c === '"') inQ = true;
+    else if (c === ',' || c === '\t' || c === ';') { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+
+/* ---------- CAD 导入（R3） ---------- */
+const CAD_ALIAS = {
+  ref: ['refdes', 'ref', '位号', 'designator', 'part', '元件', '标号'],
+  x: ['x', 'mid x', 'x坐标', '坐标x', 'posx', 'ref x'],
+  y: ['y', 'mid y', 'y坐标', '坐标y', 'posy', 'ref y'],
+  rot: ['rotation', 'rot', '角度', 'rotate', '方向'],
+  side: ['side', 'layer', '面', '面别', 'top/bot'],
+};
+function detectCadColumns(header) {
+  const cols = { ref: -1, x: -1, y: -1, rot: -1, side: -1 };
+  header.forEach((h, i) => {
+    const t = String(h).trim().toLowerCase();
+    for (const k of Object.keys(CAD_ALIAS)) if (cols[k] < 0 && CAD_ALIAS[k].includes(t)) cols[k] = i;
+  });
+  return cols;
+}
+function parseCAD(text) {
+  const rows = parseCSVText(text);
+  if (!rows.length) return { pts: [], error: 'CAD 文件为空' };
+  let cols = detectCadColumns(rows[0]); let start = 1;
+  if (cols.ref < 0 || cols.x < 0 || cols.y < 0) { cols = { ref: 0, x: 1, y: 2, rot: 3, side: 4 }; start = isNaN(parseFloat(rows[0][1])) ? 1 : 0; }
+  const pts = [];
+  for (let i = start; i < rows.length; i++) {
+    const r = rows[i]; const x = parseFloat(r[cols.x]), y = parseFloat(r[cols.y]);
+    if (!r[cols.ref] || isNaN(x) || isNaN(y)) continue;
+    pts.push({ ref: String(r[cols.ref]).trim(), x: round3(x), y: round3(y), rot: cols.rot >= 0 ? (parseFloat(r[cols.rot]) || 0) : 0, side: cols.side >= 0 && /b/i.test(String(r[cols.side])) ? 'B' : 'T' });
+  }
+  return { pts, error: pts.length ? null : 'CAD 未解析出坐标点' };
+}
+
+/* ---------- BOM 行处理（R4） ---------- */
+function splitRefs(cell) {
+  const out = [];
+  for (let part of String(cell ?? '').split(/[,;，、\s]+/)) {
+    part = part.trim(); if (!part) continue;
+    const m = part.match(/^([A-Za-z]+)(\d+)-([A-Za-z]*)(\d+)$/);
+    if (m && (!m[3] || m[3] === m[1])) { const a = +m[2], b = +m[4]; if (b >= a && b - a < 10000) { for (let i = a; i <= b; i++) out.push(m[1] + i); continue; } }
+    out.push(part);
+  }
+  return out;
+}
+const BOM_ROLES = ['无', '料号', '规格', '位置', '用量', '名称', '备注'];
+function bomRowsFromTable(table, roleMap) {
+  const gi = role => roleMap.indexOf(role);
+  return table.map(r => {
+    const qtyRaw = gi('用量') >= 0 ? r[gi('用量')] : '';
+    const qty = qtyRaw === '' || qtyRaw == null ? null : parseInt(qtyRaw, 10);
+    return {
+      partNo: gi('料号') >= 0 ? String(r[gi('料号')] ?? '').trim() : '',
+      spec: gi('规格') >= 0 ? String(r[gi('规格')] ?? '').trim() : '',
+      simpleSpec: '', refs: gi('位置') >= 0 ? splitRefs(r[gi('位置')]) : [],
+      qty: isNaN(qty) ? null : qty,
+      name: gi('名称') >= 0 ? String(r[gi('名称')] ?? '').trim() : '',
+      remark: gi('备注') >= 0 ? String(r[gi('备注')] ?? '').trim() : '',
+      code: '', codeStatus: '',
+    };
+  }).filter(r => r.partNo || r.spec || r.refs.length);
+}
+
+/* ---------- 智能重合（R9） ---------- */
+function alignCadToPads(cadPts, padPts) {
+  if (!cadPts.length || !padPts.length) return { dx: 0, dy: 0, avgDev: Infinity, pairs: 0 };
+  /* 平移投票定初值：逐对 (CAD点, 焊盘中心) 给出候选偏移，取 0.5mm 内命中最多的一个。
+     旧版用两组质心差定初值，真板上提取中心缺插件件、又有多提/并提，质心被带偏后迭代收不回来（实测偏差 2.4mm）。 */
+  let dx = 0, dy = 0, bestScore = -1;
+  for (const c of cadPts) for (const p of padPts) {
+    const ox = p.x - c.x, oy = p.y - c.y;
+    let score = 0;
+    for (const q of cadPts) {
+      let bd = 1e18;
+      for (const t of padPts) { const d = (q.x + ox - t.x) ** 2 + (q.y + oy - t.y) ** 2; if (d < bd) bd = d; }
+      if (bd < 0.25) score++;
+    }
+    if (score > bestScore) { bestScore = score; dx = ox; dy = oy; }
+  }
+  for (let iter = 0; iter < 2; iter++) {
+    let sx = 0, sy = 0, n = 0;
+    for (const c of cadPts) {
+      let best = null, bd = 1e18;
+      for (const p of padPts) { const d = (c.x + dx - p.x) ** 2 + (c.y + dy - p.y) ** 2; if (d < bd) { bd = d; best = p; } }
+      if (best && bd < 1) { sx += best.x - (c.x + dx); sy += best.y - (c.y + dy); n++; } // 只用 1mm 内 inlier 精修，防邻近错中心把偏移拖偏（真板实测）
+    }
+    if (!n) break;
+    dx += sx / n; dy += sy / n;
+  }
+  let dev = 0, pairs = 0;
+  for (const c of cadPts) {
+    let bd = 1e18;
+    for (const p of padPts) { const d = Math.hypot(c.x + dx - p.x, c.y + dy - p.y); if (d < bd) bd = d; }
+    if (bd < 5) { dev += bd; pairs++; }
+  }
+  return { dx: round3(dx), dy: round3(dy), avgDev: pairs ? round3(dev / pairs) : Infinity, pairs };
+}
+
+/* ---------- 提取算法（R10–R14） ---------- */
+function padsInRect(prims, rect) {
+  return prims.filter(p => {
+    if (p.k !== 'f') return false;
+    const c = primCenter(p);
+    return c.x >= rect.x0 && c.x <= rect.x1 && c.y >= rect.y0 && c.y <= rect.y1;
+  });
+}
+function findSamePads(prims, target, tol = 0.02) {
+  return prims.filter(p => p.k === 'f' && p.shape === target.shape && Math.abs(p.w - target.w) <= tol && Math.abs(p.h - target.h) <= tol);
+}
+function clusterVals(vals, tol = 0.3) {
+  const sorted = [...vals].sort((a, b) => a - b); const groups = [];
+  for (const v of sorted) { const g = groups[groups.length - 1]; if (g && Math.abs(v - g[g.length - 1]) <= tol) g.push(v); else groups.push([v]); }
+  return groups.map(g => g.reduce((a, b) => a + b, 0) / g.length).sort((a, b) => a - b);
+}
+function medianDiff(vals) {
+  if (vals.length < 2) return 0;
+  const d = []; for (let i = 1; i < vals.length; i++) d.push(vals[i] - vals[i - 1]);
+  d.sort((a, b) => a - b); return round3(d[Math.floor(d.length / 2)]);
+}
+/* 规则阵列识别（R12）：给一组焊盘中心，数出行列与间距 */
+function detectArray(pads) {
+  const centers = pads.map(primCenter);
+  const xs = clusterVals(centers.map(c => c.x)), ys = clusterVals(centers.map(c => c.y));
+  return { cols: xs.length, rows: ys.length, pitchX: medianDiff(xs), pitchY: medianDiff(ys), xs, ys, count: centers.length };
+}
+function arrayCoords(pads, prefix) {
+  const a = detectArray(pads);
+  const sorted = pads.map(p => ({ p, c: primCenter(p) })).sort((u, v) => (v.c.y - u.c.y) || (u.c.x - v.c.x));
+  return sorted.map((s, i) => ({ ref: prefix + (i + 1), x: round3(s.c.x), y: round3(s.c.y), rot: 0, side: 'T', partNo: '', spec: '', pkg: '' }));
+}
+/* 倒装 BGA 提取（R13）：圆形焊盘阵列 → 球位坐标，去重 */
+function bgaExtract(pads, existing, origin) {
+  const balls = pads.filter(p => p.shape === 'C').map(p => ({ p, c: primCenter(p) }))
+    .sort((u, v) => (v.c.y - u.c.y) || (u.c.x - v.c.x));
+  const out = []; let skipped = 0;
+  balls.forEach((b, i) => {
+    const x = round3(b.c.x - (origin ? origin.x : 0)), y = round3(b.c.y - (origin ? origin.y : 0));
+    const dup = existing.some(e => Math.abs(e.x - x) < 0.05 && Math.abs(e.y - y) < 0.05) || out.some(e => Math.abs(e.x - x) < 0.05 && Math.abs(e.y - y) < 0.05);
+    if (dup) { skipped++; return; }
+    out.push({ ref: 'P_' + (out.length + 1), x, y, rot: 0, side: 'T', partNo: '', spec: '', pkg: 'BGA', ball: true });
+  });
+  return { coords: out, added: out.length, skipped };
+}
+/* 片式元件配对：一对焊盘 → 一个元件坐标（中心+焊盘方向角） */
+function pairPadsToCoords(pads, refPrefix) {
+  const centers = pads.filter(p => p.k === 'f').map(p => ({ p, c: primCenter(p), used: false }));
+  const coords = []; let n = 0;
+  for (const a of centers) {
+    if (a.used) continue;
+    let best = null, bd = 1e18;
+    for (const b of centers) { if (b === a || b.used) continue; const d = dist(a.c, b.c); if (d < bd) { bd = d; best = b; } }
+    if (best && bd <= 3.5) {
+      a.used = best.used = true; n++;
+      coords.push({
+        ref: refPrefix + n, x: round3((a.c.x + best.c.x) / 2), y: round3((a.c.y + best.c.y) / 2),
+        rot: 0, padAngle: round3(Math.atan2(best.c.y - a.c.y, best.c.x - a.c.x) * 180 / Math.PI),
+        side: 'T', partNo: '', spec: '', pkg: '', padW: a.p.w, padH: a.p.h,
+      });
+    }
+  }
+  return coords;
+}
+
+/* 焊盘聚类成元件中心（并查集，链式距离内合并）：BGA 整片算 1 个中心，片式一对算 1 个 */
+function componentCenters(pads, clusterDist = 1.7) {
+  /* 区域图元（大焊盘常被导出成区域而非闪光）也算焊盘，取其包围盒中心；
+     插件件在锡膏层没有焊盘，本来就提不出来，不在这里硬凑。 */
+  const cs = pads.filter(p => p.k === 'f' || p.k === 'r').map(p => primCenter(p));
+  const parent = cs.map((_, i) => i);
+  const find = i => parent[i] === i ? i : (parent[i] = find(parent[i]));
+  for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) {
+    if (Math.abs(cs[i].x - cs[j].x) > clusterDist || Math.abs(cs[i].y - cs[j].y) > clusterDist) continue;
+    if (Math.hypot(cs[i].x - cs[j].x, cs[i].y - cs[j].y) <= clusterDist) { const a = find(i), b = find(j); if (a !== b) parent[a] = b; }
+  }
+  const groups = new Map();
+  cs.forEach((c, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(c); });
+  return [...groups.values()].map(g => ({ x: round3(g.reduce((s, p) => s + p.x, 0) / g.length), y: round3(g.reduce((s, p) => s + p.y, 0) / g.length) }));
+}
+
+/* ---------- 拼板（R17/R18/R19） ---------- */
+function detectPanelsFromBoxes(boxes) {
+  if (!boxes.length) return [];
+  const xs = clusterVals(boxes.map(b => b.x0), 0.5), ys = clusterVals(boxes.map(b => b.y0), 0.5);
+  const rows = [];
+  for (const y of ys) for (const x of xs) if (boxes.some(b => Math.abs(b.x0 - x) < 0.5 && Math.abs(b.y0 - y) < 0.5)) rows.push({ x: round3(x), y: round3(y), r: 0, bad: false });
+  return rows;
+}
+function manualPanels(nx, ny, pitchX, pitchY, ox = 0, oy = 0) {
+  const rows = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) rows.push({ x: round3(ox + i * pitchX), y: round3(oy + j * pitchY), r: 0, bad: false });
+  return rows;
+}
+function expandPanels(coords, panels, board, opts = {}) {
+  const skipBad = opts.skipBad !== false;
+  const out = [];
+  panels.forEach((p, pi) => {
+    if (skipBad && p.bad) return;
+    for (const c of coords) {
+      let x, y, rot = c.rot, side = c.side;
+      if (p.r === 180) { x = p.x + (board.w - c.x); y = p.y + (board.h - c.y); rot = (rot + 180) % 360; if (p.flip) side = side === 'T' ? 'B' : 'T'; }
+      else { x = p.x + c.x; y = p.y + c.y; }
+      out.push({ ...c, x: round3(x), y: round3(y), rot, side, panel: pi + 1, ref: panels.length > 1 ? c.ref + '@' + (pi + 1) : c.ref });
+    }
+  });
+  return out;
+}
+
+/* ---------- BOM 精简规则引擎（R20） ---------- */
+const DEFAULT_SIMPLIFY = {
+  order: ['value', 'voltage', 'pkg', 'material'], sep: '-',
+  repl: [['Ω', 'R'], ['ohm', 'R']],
+  pkgSuffix: { CAP: 'C', RES: 'R', IND: 'L', LED: '' },
+};
+function parseSpecFields(raw) {
+  const s = String(raw || '');
+  const f = { cat: '', value: '', voltage: '', pkg: '', material: '', tol: '' };
+  const cm = s.match(/^(CAP|RES|IND|LED|DIO)/i); if (cm) f.cat = cm[1].toUpperCase();
+  const vm = s.match(/(\d+(?:\.\d+)?)\s*(uF|nF|pF|mH|uH|Ω|OHM|R|K|M)(?![a-zA-Z])/i);
+  if (vm) { f.value = vm[1] + vm[2].toUpperCase().replace('OHM', 'R'); if (!f.cat) f.cat = /F$/.test(f.value) ? 'CAP' : 'RES'; }
+  const vv = s.match(/(\d+(?:\.\d+)?)\s*V(?![a-zA-Z])/); if (vv) f.voltage = vv[1] + 'V';
+  const pm = s.match(/(0201|0402|0603|0805|1206|1210|1812|2512|SOT-?223|SOT-?23|SOP-?8|SOIC-?8|SOIC-?16|QFN-?\d+|QFP-?\d+|TYPE-?C)/i);
+  if (pm) f.pkg = pm[1].toUpperCase().replace('TYPE-C', 'TYPEC');
+  const mm = s.match(/(X5R|X7R|C0G|NP0|NPO|Y5V)/i); if (mm) f.material = mm[1].toUpperCase().replace('NPO', 'NP0');
+  const tm = s.match(/(T\s*=\s*[\d.]+|±\s*[\d.]+%)/); if (tm) f.tol = tm[1].replace(/\s/g, '');
+  return f;
+}
+function simplifySpec(raw, rules) {
+  rules = { ...DEFAULT_SIMPLIFY, ...(rules || {}) };
+  let s = String(raw || '');
+  for (const [a, b] of rules.repl) s = s.split(a).join(b);
+  const f = parseSpecFields(s);
+  const parts = [];
+  for (const key of rules.order) {
+    if (key === 'pkg' && f.pkg) parts.push(f.pkg + (rules.pkgSuffix[f.cat] || ''));
+    else if (f[key]) parts.push(f[key]);
+  }
+  return parts.join(rules.sep);
+}
+/* ---------- 编码库比对（R21） ---------- */
+function checkBomCodes(rows, codeLib) {
+  for (const r of rows) {
+    if (!r.partNo) { r.codeStatus = ''; continue; }
+    const hit = codeLib[r.partNo];
+    r.codeStatus = hit ? (hit === r.simpleSpec || !r.simpleSpec ? 'ok' : '规格不一致') : '编码未登记';
+  }
+  return rows;
+}
+
+/* ---------- 合并 BOM（R22） ---------- */
+function mergeBom(coords, bomRows, opts = {}) {
+  const side = opts.side || 'ALL';
+  const pool = coords.filter(c => side === 'ALL' || c.side === side);
+  const byRef = new Map(); const dupCoords = [];
+  for (const c of pool) { if (byRef.has(c.ref)) dupCoords.push(c.ref); else byRef.set(c.ref, c); }
+  const matched = new Set(); const bomUnmatched = []; const qtyMismatch = []; const refSeen = new Map();
+  for (const row of bomRows) {
+    let hit = 0;
+    for (const ref of row.refs) {
+      refSeen.set(ref, (refSeen.get(ref) || 0) + 1);
+      const c = byRef.get(ref);
+      if (c) { c.partNo = row.partNo; c.spec = row.simpleSpec || row.spec; hit++; matched.add(ref); }
+    }
+    if (row.refs.length && hit === 0) bomUnmatched.push(row);
+    if (row.qty != null && row.refs.length && row.qty !== row.refs.length) qtyMismatch.push({ partNo: row.partNo, qty: row.qty, refs: row.refs.length });
+  }
+  const dupRefs = [...refSeen.entries()].filter(([, n]) => n > 1).map(([r]) => r);
+  const coordUnmatched = pool.filter(c => !matched.has(c.ref)).map(c => c.ref);
+  let merged = pool.filter(c => matched.has(c.ref));
+  if (!opts.keepOnlySuccess) merged = pool.slice();
+  return {
+    merged, stats: { mergedCount: matched.size, bomUnmatchedRows: bomUnmatched.length, coordUnmatched: coordUnmatched.length },
+    bomUnmatched, coordUnmatched, checks: { dupRefs: [...dupRefs, ...dupCoords], qtyMismatch },
+  };
+}
+/* ---------- BOM 比对（R23，通用口径） ---------- */
+function compareBom(oldRows, newRows) {
+  const idx = rows => { const m = new Map(); for (const r of rows) for (const ref of r.refs) m.set(ref, r); return m; };
+  const a = idx(oldRows), b = idx(newRows); const diffs = [];
+  for (const [ref, r] of b) if (!a.has(ref)) diffs.push({ ref, type: '新增', detail: r.partNo + ' ' + r.spec });
+  for (const [ref, r] of a) {
+    if (!b.has(ref)) diffs.push({ ref, type: '删除', detail: r.partNo + ' ' + r.spec });
+    else { const n = b.get(ref); if (n.partNo !== r.partNo || n.spec !== r.spec) diffs.push({ ref, type: '规格变化', detail: r.partNo + ' ' + r.spec + ' → ' + n.partNo + ' ' + n.spec }); }
+  }
+  return diffs.sort((x, y) => x.ref.localeCompare(y.ref, undefined, { numeric: true }));
+}
+
+/* ---------- 元件数据库（R24）与自动匹配（R25） ---------- */
+const COMPONENT_DB = [
+  ['0201', 0.6, 0.3], ['0402', 1.0, 0.5], ['0603', 1.6, 0.8], ['0805', 2.0, 1.25], ['1206', 3.2, 1.6],
+  ['1210', 3.2, 2.5], ['1812', 4.5, 3.2], ['2512', 6.3, 3.2], ['SOT23', 2.9, 1.3], ['SOT223', 6.5, 3.5],
+  ['SOP8', 5.0, 3.9], ['SOIC8', 5.0, 3.9], ['SOIC16', 10.0, 3.9], ['QFN32', 5.0, 5.0], ['QFN48', 7.0, 7.0],
+  ['QFP44', 10.0, 10.0], ['QFP64', 14.0, 14.0], ['BGA64', 8.0, 8.0], ['LED', 3.2, 1.6], ['TYPEC', 7.4, 5.7],
+].map(([pkg, w, h], i) => ({ id: 100 + i, pkg, w, h, baseAngle: 0, feeder: w <= 2.0 ? '8mm' : (w <= 3.2 ? '12mm' : (w <= 7.5 ? '16mm' : '托盘')) }));
+function pkgOfString(s) {
+  const m = String(s || '').match(/(0201|0402|0603|0805|1206|1210|1812|2512|SOT-?223|SOT-?23|SOP-?8|SOIC-?16|SOIC-?8|QFN-?\d+|QFP-?\d+|TYPE-?C|BGA-?\d+|LED)/i);
+  if (!m) return '';
+  let p = m[1].toUpperCase().replace('-', '');
+  if (/^QFN/.test(p)) p = 'QFN' + (p.match(/\d+/) || ['32'])[0];
+  if (/^QFP/.test(p)) p = 'QFP' + (p.match(/\d+/) || ['44'])[0];
+  if (/^BGA/.test(p)) p = 'BGA64';
+  return p;
+}
+/* 雅马哈标准阻容编号（xiaocai_gaps.md 缺口 5 实证：自动匹配元件库对话框「机型：雅马哈 /
+   数据库：雅马哈内置标准库 / 匹配条件：雅马哈标准阻容编号」，结果 0402 电阻=500、0402 电容=510、未匹配=-1；
+   其余封装按封装档 +20、电容=电阻+10 类推，无视频证据，待真实样例定版） */
+const YAMAHA_RC_NO = { '0201': 480, '0402': 500, '0603': 520, '0805': 540, '1206': 560, '1210': 580, '1812': 600, '2512': 620 };
+function chipKind(it) {
+  const spec = String(it.spec || '').toUpperCase(), pn = String(it.partNo || '').toUpperCase();
+  const pkg = String(it.pkg || pkgOfString(it.spec) || pkgOfString(it.partNo) || '').toUpperCase();
+  if (/^RES/.test(spec) || /电阻/.test(spec) || /^R-/.test(pn) || /\dR$/.test(pkg)) return 'R';
+  if (/^CAP/.test(spec) || /电容/.test(spec) || /^C-/.test(pn) || /\dC$/.test(pkg)) return 'C';
+  const ref = String(it.ref || '');
+  if (/^R\d/.test(ref)) return 'R'; if (/^C\d/.test(ref)) return 'C';
+  return '';
+}
+function yamahaLibNo(it) {
+  const kind = chipKind(it); if (!kind) return -1;
+  const pkg = String(it.pkg || pkgOfString(it.spec) || pkgOfString(it.partNo) || '');
+  const base = YAMAHA_RC_NO[pkg]; if (base == null) return -1;
+  return kind === 'C' ? base + 10 : base;
+}
+function autoMatchDb(items) {
+  let ok = 0; const kinds = new Set();
+  for (const it of items) {
+    const pkg = it.pkg || pkgOfString(it.spec) || pkgOfString(it.partNo);
+    it.pkg = pkg || it.pkg || '';
+    const yNo = yamahaLibNo(it);
+    if (yNo > 0) { it.dbId = yNo; ok++; kinds.add(it.partNo || it.ref); continue; }
+    const hit = COMPONENT_DB.find(d => d.pkg === pkg);
+    it.dbId = hit ? hit.id : -1;
+    if (hit) { ok++; kinds.add(it.partNo || it.ref); }
+  }
+  return { ok, fail: items.length - ok };
+}
+/* ---------- 方向校正（R26） ---------- */
+function correctDirections(coords) {
+  const changes = [];
+  for (const c of coords) {
+    const pkg = c.pkg || pkgOfString(c.spec);
+    const db = COMPONENT_DB.find(d => d.pkg === pkg);
+    if (!db) continue;
+    const target = ((db.baseAngle + (c.padAngle || 0)) % 360 + 360) % 360;
+    const norm = ((Math.round(target / 90) * 90) % 360);
+    if (norm !== ((c.rot % 360) + 360) % 360) { changes.push({ ref: c.ref, from: c.rot, to: norm }); c.rot = norm; }
+  }
+  return changes;
+}
+/* ---------- 站位表（R33，通用口径） ---------- */
+function buildFeederTable(coords) {
+  const groups = new Map();
+  for (const c of coords) {
+    const key = c.partNo || '(未合并)';
+    if (!groups.has(key)) groups.set(key, { partNo: key, spec: c.spec || '', pkg: c.pkg || pkgOfString(c.spec), qty: 0 });
+    groups.get(key).qty++;
+  }
+  return [...groups.values()].map((g, i) => {
+    const db = COMPONENT_DB.find(d => d.pkg === g.pkg);
+    return { station: 'F' + (i + 1), partNo: g.partNo, spec: g.spec, qty: g.qty, feeder: db ? db.feeder : '8mm', pkg: g.pkg };
+  });
+}
+
+/* ---------- IPC 合规判定（R39） ---------- */
+function ipcCompare(origPrims, procPrims, thickness) {
+  const t = thickness || 0.12;
+  const orig = origPrims.filter(p => p.k === 'f'), proc = procPrims.filter(p => p.k === 'f');
+  const used = new Set(); const rows = [];
+  orig.forEach((o, i) => {
+    let best = null, bd = 1e18;
+    proc.forEach((p, j) => { if (used.has(j)) return; const d = dist(o, p); if (d < bd) { bd = d; best = { p, j }; } });
+    const name = o.name || ('器件' + (i + 1));
+    if (!best || bd > 1.0) { rows.push({ name, dev: null, ow: o.w, oh: o.h, pw: 0, ph: 0, area: 0, ar: 0, verdict: '问题', why: '处理后缺失' }); return; }
+    used.add(best.j);
+    const p = best.p, area = p.w * p.h, ar = area / (2 * (p.w + p.h) * t);
+    let verdict, why;
+    if (ar >= 0.66) { verdict = '合格'; why = 'AR≥0.66'; }
+    else if (ar >= 0.62) { verdict = '临界'; why = '0.62≤AR<0.66 临界'; }
+    else { verdict = '问题'; why = 'AR<0.62'; }
+    rows.push({ name, dev: round3(bd), ow: o.w, oh: o.h, pw: p.w, ph: p.h, area: round3(area), ar: round3(ar), verdict, why });
+  });
+  return rows;
+}
+
+/* ---------- 倒装 BGA 球位 POS 导出（R35 改版，自明示版式） ----------
+   POS 无公开标准版式（yamaha_output_research.md 第 3 节：全网无雅马哈 POS 样例），
+   本版式由本软件自明示：文件头注释写清每列含义，内容为 BGA 球位逐点坐标，不冒充官方格式。 */
+function genPOS(balls, opts = {}) {
+  const dia = opts.dia ?? 0.3;
+  const sorted = [...balls].sort((a, b) => (b.y - a.y) || (a.x - b.x));
+  let cx = 0, cy = 0; sorted.forEach(b => { cx += b.x / sorted.length; cy += b.y / sorted.length; });
+  const lines = [
+    '; MJ SMT 工作台 — 倒装 BGA 球位 POS 输出（本软件自明示版式，非官方格式）',
+    '; 列定义（Tab 分隔，共 4 列）：',
+    ';  第1列 球位编号（提取顺序 P_n）',
+    ';  第2列 X — 相对球阵整体中心的 X 坐标（mm）',
+    ';  第3列 Y — 相对球阵整体中心的 Y 坐标（mm）',
+    ';  第4列 球径（mm）',
+    '; 球数 ' + sorted.length + (opts.mirrorX ? '，已镜像 X' : '') + (opts.mirrorY ? '，已镜像 Y' : ''),
+  ];
+  sorted.forEach((b, i) => {
+    let x = b.x - cx, y = b.y - cy;
+    if (opts.mirrorX) x = -x; if (opts.mirrorY) y = -y;
+    lines.push(`${b.ref || 'P_' + (i + 1)}\t${x.toFixed(3)}\t${y.toFixed(3)}\t${dia.toFixed(2)}`);
+  });
+  return { text: lines.join('\n') + '\n', count: sorted.length };
+}
+
+/* ---------- 导出（R34/R40） ---------- */
+function coordsToText(coords, fmt) {
+  const head = fmt === 'csv' ? '位号,X,Y,角度,面,料号,规格' : '位号\tX\tY\t角度\t面\t料号\t规格';
+  const sep = fmt === 'csv' ? ',' : '\t';
+  const lines = [head];
+  for (const c of coords) lines.push([c.ref, c.x.toFixed(3), c.y.toFixed(3), c.rot, c.side, c.partNo || '', (c.spec || '').replace(/,/g, ' ')].join(sep));
+  return lines.join('\n') + '\n';
+}
+/* 位号-坐标三档匹配（R40）：档1 严格≤3mm / 档2 ≤8mm 同类型 / 档3 ≤12mm 任意 */
+function matchRefTiers(labels, coords) {
+  const res = { strict: 0, standard: 0, loose: 0, unmatched: 0, detail: [] };
+  for (const lb of labels) {
+    let bd = 1e18, bc = null;
+    for (const c of coords) { const d = Math.hypot(lb.x - c.x, lb.y - c.y); if (d < bd) { bd = d; bc = c; } }
+    const sameType = bc && (lb.ref.replace(/[0-9]/g, '') === bc.ref.replace(/[0-9]/g, ''));
+    let tier = '未匹配';
+    if (bd <= 3) { tier = '档1·严格'; res.strict++; }
+    else if (bd <= 8 && sameType) { tier = '档2·标准'; res.standard++; }
+    else if (bd <= 12) { tier = '档3·宽松'; res.loose++; }
+    else res.unmatched++;
+    res.detail.push({ ref: lb.ref, x: lb.x, y: lb.y, tier, dist: round3(bd), matchedRef: bc ? bc.ref : '' });
+  }
+  return res;
+}
+
+/* ---------- 雅马哈 P-Tool 路线（R36 改版，依据 yamaha_output_research.md） ----------
+   .ygx 是雅马哈 P-Tool 的专有基板数据格式，无公开规范、无任何开源读写实现；
+   官方唯一开放路线 = P-Tool「ASCII 数据转换」：外部软件出列义明确的 ASCII 文本，
+   用户在 P-Tool 里建一次「转换定义」做列映射 → 由 P-Tool 生成 .ygx。本软件不出原生 .ygx。 */
+const YAMAHA_ASCII_COLS = ['位号 RefDes', '料号 PartNo', '规格 Spec', 'X(mm)', 'Y(mm)', '角度 Angle(deg)', '面别 Side(T/B)', '拼板块号 Panel'];
+function genYamahaAscii(coords, opts = {}) {
+  const lines = [
+    '; MJ SMT 工作台 — 雅马哈 P-Tool ASCII 贴装数据',
+    '; 用途：在雅马哈 P-Tool 的「ASCII 数据转换」中导入，由 P-Tool 生成 .ygx 上机。',
+    '; 注意：.ygx 由 P-Tool 生成，本软件不出原生 .ygx（.ygx 为雅马哈专有格式，格式未公开）。',
+    '; 工程：' + (opts.proj || ''),
+    '; 单位：X/Y = mm，角度 = deg；面别 T = 顶层、B = 底层；分隔符 = Tab；坐标基准 = 板原点。',
+    '; 列定义（共 8 列，列序固定，导入 P-Tool 时请勿改动）：',
+    ...YAMAHA_ASCII_COLS.map((c, i) => ';  第' + (i + 1) + '列 ' + c),
+    'RefDes\tPartNo\tSpec\tX\tY\tAngle\tSide\tPanel',
+  ];
+  for (const c of coords) lines.push([c.ref, c.partNo || '', String(c.spec || '').replace(/[\t,]/g, ' '), (+c.x).toFixed(3), (+c.y).toFixed(3), c.rot ?? 0, c.side || 'T', c.panel ?? 1].join('\t'));
+  return { text: lines.join('\n') + '\n', count: coords.length };
+}
+function genPToolConvDef() {
+  const fields = ['元件位号', '元件名/料号', '元件规格（备注）', '贴装 X 坐标（mm）', '贴装 Y 坐标（mm）', '贴装角度（deg）', '面别（T=顶层 / B=底层）', '拼板块号'];
+  return ['雅马哈 P-Tool 转换定义对照说明（配合雅马哈 ASCII 贴装数据文件使用）',
+    '依据：雅马哈 P-Tool 官方手册第 5 章「ASCII 数据转换」——输入版式不写死，由用户在 P-Tool 内建一份「转换定义文件」声明外部文本的列映射，建一次可长期复用。',
+    '',
+    '在 P-Tool 中新建转换定义时，按下表逐列对应：',
+    ...YAMAHA_ASCII_COLS.map((c, i) => '  外部文件第 ' + (i + 1) + ' 列（' + c + '） → P-Tool 字段：' + fields[i]),
+    '',
+    '其它设置：',
+    '  - 跳过以 ; 开头的注释行；第一条非注释行是列名行（RefDes 开头），可跳过或作定义参照。',
+    '  - 分隔符选 Tab；小数点为 . ；角度单位 deg，0° 方向以 P-Tool 定义为准，必要时在定义里用逻辑公式做 ±90/180 修正。',
+    '  - 导入完成后由 P-Tool 生成 .ygx；本软件不直接生成 .ygx（其格式未公开，无公开规范可依）。',
+    '  - 本说明按官方手册目录与行业通行做法编写，未经真实 P-Tool 导入验证；首次使用请先用少量坐标试导入，核对原点与方向后再整板导入。',
+  ].join('\n') + '\n';
+}
+
+/* ---------- 红胶派生 + 钢网产物套件（sean_gaps.md ③④） ---------- */
+/* 红胶层由锡膏层派生：按元件名分组取焊盘中心生成胶点（顶层 .glu / 底层 .glub）。
+   原产品证据只有「上传勾选 + glue 专属方案 + 由锡膏层派生子集」这一层，胶点大小/间距等点胶细则
+   无任何画面证据——这里的胶点直径是可改参数、不是原产品参数，并在导出文件头注明；无元件名的图元不派生。 */
+function deriveGluePrims(pastePrims, opts = {}) {
+  const dia = opts.dia ?? 1.0;
+  const groups = new Map();
+  for (const p of pastePrims) { if (p.k !== 'f' || !p.name) continue; if (!groups.has(p.name)) groups.set(p.name, []); groups.get(p.name).push(primCenter(p)); }
+  return [...groups.entries()].map(([name, cs]) => ({ k: 'f', shape: 'C', x: round3(cs.reduce((s, c) => s + c.x, 0) / cs.length), y: round3(cs.reduce((s, c) => s + c.y, 0) / cs.length), w: dia, h: dia, rot: 0, pol: 'D', name }));
+}
+/* 产物套件（SEAN 主系统 com_ 命名实证）：丝印 .gxo / 钢网（锡膏） .gxp / 阻焊 .gxs，统一 com_ 前缀；
+   铜层、钻孔等其它层保持各自原始扩展名；红胶按 opts.glue 由锡膏层派生：顶层锡膏文件名 + .glu，
+   底层先翻转再派生 .glub（文件名 flip_ 前缀）；模板文件要求口径里红胶产物另记为 gxrt/gxrb。 */
+function stencilSuiteFiles(layers, opts = {}) {
+  const EXT = { silk: 'gxo', paste: 'gxp', solder: 'gxs' };
+  const files = []; const notes = [];
+  const enc = new TextEncoder();
+  const push = (name, text) => files.push({ name, text, data: enc.encode(text) });
+  for (const l of layers) {
+    const base = String(l.fileName || l.name).replace(/\.[^.]*$/, '');
+    const ext = EXT[l.kind] || (String(l.fileName || '').split('.').pop() || 'ger');
+    push('com_' + base + '.' + ext, writeGerber(l.prims, l.name));
+  }
+  if (opts.glue) {
+    for (const l of layers.filter(x => x.kind === 'paste')) {
+      const base = String(l.fileName || l.name).replace(/\.[^.]*$/, '');
+      const glue = deriveGluePrims(l.prims, opts);
+      if (!glue.length) { notes.push(l.name + '：无带元件名的焊盘，未派生红胶层'); continue; }
+      const head = 'G04 红胶层由锡膏层派生：按元件名分组取焊盘中心生成胶点，胶点直径 ' + (opts.dia ?? 1.0) + 'mm（本软件可改参数）；点胶细则原产品无公开证据，此为派生口径注明 *\n';
+      if (l.side === 'B') push('flip_' + base + '.glub', head + writeGerber(glue, l.name + '-红胶'));
+      else push(base + '.glu', head + writeGerber(glue, l.name + '-红胶'));
+    }
+  }
+  return { files, notes };
+}
+
+/* ---------- 治具生成（参数口径 = StarCompute/zhiju 的 config.json，见 external_evidence.md 1.1；AGPL-3.0，此处只复刻参数体系） ---------- */
+const FIXTURE_DEFAULTS = {
+  pcb: { thickness: 1.6, clearance_per_side: 0.5, clearance_tolerance: 0.1 },
+  fixture: { edge_margin: 13, total_height: 20, cavity_depth: 15, support_rim_width: 1 },
+  fillet: { radius: 1.5 },
+  notch: { type: 'half_cylinder', radius: 10, reach: 3, length: 30, depth: 12 },
+  corner_magnets: { diameter: 10, depth: 5.5, inset: 13 },
+  side_fix: { mode: 'magnet' },
+  pins: { fit_clearance_per_side: 0.05, anti_fool: true },
+  mounting_holes: { min_dia: 1.8, max_dia: 6.5, max_count: 8 },
+};
+function fixtureLayout(board, P) {
+  const m = P.fixture.edge_margin, clr = P.pcb.clearance_per_side;
+  const outerW = round3(board.w + m * 2), outerH = round3(board.h + m * 2);
+  const inset = P.corner_magnets.inset;
+  const magnets = [{ x: inset, y: inset }, { x: outerW - inset, y: inset }, { x: inset, y: outerH - inset }, { x: outerW - inset, y: outerH - inset }]
+    .map(p => ({ x: round3(p.x), y: round3(p.y), d: P.corner_magnets.diameter }));
+  return { outerW, outerH, cavityW: round3(board.w + clr * 2), cavityH: round3(board.h + clr * 2), cavityX: round3(m - clr), cavityY: round3(m - clr), boardX: m, boardY: m, magnets };
+}
+const COMP_HEIGHT = { '0201': 0.3, '0402': 0.35, '0603': 0.45, '0805': 0.55, '1206': 0.55, '1210': 0.55, '1812': 0.6, '2512': 0.6, 'SOT23': 1.0, 'SOT223': 1.6, 'SOP8': 1.4, 'SOIC8': 1.4, 'SOIC16': 1.4, 'QFN32': 0.8, 'QFN48': 0.8, 'QFP44': 1.2, 'QFP64': 1.2, 'BGA64': 1.0, 'LED': 0.8, 'TYPEC': 3.2 };
+function compTypeOf(c) {
+  const ref = String(c.ref || ''), pkg = String(c.pkg || '');
+  if (/^(J|P|CN|HDR)/.test(ref) || /TYPEC|HDR/.test(pkg)) return '接插件';
+  if (/^R/.test(ref)) return '电阻'; if (/^C/.test(ref)) return '电容'; if (/^L/.test(ref)) return '电感';
+  if (/^(LED|D)/.test(ref)) return 'LED/二极管'; if (/^Q/.test(ref)) return '三极管';
+  if (/^(X|Y)/.test(ref)) return '晶振'; if (/^(U|IC)/.test(ref) || /QFN|QFP|SOP|SOIC|BGA/.test(pkg)) return 'IC';
+  return '元件';
+}
+function compPinsOf(c) {
+  const pkg = String(c.pkg || pkgOfString(c.spec) || '');
+  if (/^(0201|0402|0603|0805|1206|1210|1812|2512)$/.test(pkg)) return 2;
+  if (pkg === 'SOT23') return 3; if (pkg === 'SOT223') return 4; if (pkg === 'TYPEC') return 24;
+  const m = pkg.match(/(\d+)\s*$/);
+  if (m) return +m[1];
+  return 2;
+}
+/* 元件信息卡 7 字段（sean_gaps.md ②实证：所在层 / 类型 / 封装 / 尺寸 L×W×H / 坐标 / 旋转 / 引脚） */
+function fixtureCompInfo(c) {
+  const pkg = c.pkg || pkgOfString(c.spec) || '';
+  const db = COMPONENT_DB.find(d => d.pkg === pkg);
+  const w = db ? db.w : (c.padW || 1.0), h = db ? db.h : (c.padH || 0.6);
+  const H = COMP_HEIGHT[pkg] ?? 0.8;
+  return { ref: c.ref, layer: (c.side === 'B' ? '底层（B）' : '顶层（T）'), type: compTypeOf(c), pkg: pkg || '—', size: w + '×' + h + '×' + H + ' mm', x: c.x, y: c.y, rot: c.rot ?? 0, pins: compPinsOf(c) };
+}
+
+/* ---------- 回流焊推荐（参数口径 = StarCompute/reflow_ai 的 config.py，见 external_evidence.md 1.2） ----------
+   这里是按其生产工艺窗口做硬约束的规则推荐，不是原仓库的贝叶斯优化/ML 模型；越窗参数钳制并注明。
+   注意原仓库许可：个人使用免费、企业/组织商用需另行授权——此处只复刻其公开的工艺窗口数值。 */
+const REFLOW_WINDOW = { peak_temp: [235, 250], tal: [45, 90], ramp_up: [1.0, 3.0], ramp_down: [-4.0, -1.0], delta_t: [0, 15], soak_temp: [150, 200], time_above_183: [60, 120], chain_speed: [40, 120], zone_num: 8 };
+const REFLOW_SOLDERS = { SAC305: 1, SN63PB37: 2, SN100C: 3 };
+const REFLOW_DEFECTS = ['虚焊', '桥连', '立碑', '空洞', '锡珠'];
+function recommendReflow(input = {}) {
+  const solder = REFLOW_SOLDERS[input.solder] ? input.solder : 'SAC305';
+  const board = input.board || 'FR-4', comp = input.comp || '普通';
+  const base = { SAC305: { peak: 245, soak: 175, tal: 60, ta183: 90 }, SN100C: { peak: 243, soak: 172, tal: 58, ta183: 88 }, SN63PB37: { peak: 228, soak: 160, tal: 50, ta183: 75 } }[solder];
+  let peak = base.peak, soak = base.soak, tal = base.tal, ta183 = base.ta183;
+  let rampUp = 2.0, rampDown = -2.5, chain = 80, deltaT = 8;
+  if (comp === '大热容') { peak += 3; tal += 10; chain -= 10; }
+  if (comp === 'BGA多') { peak += 2; rampUp = 1.5; deltaT = 12; }
+  if (comp === '细间距') { rampUp = 1.8; tal -= 5; }
+  if (board === '铝基板') { chain -= 15; deltaT += 2; }
+  if (board === '陶瓷') { rampUp = 1.5; }
+  const clampNotes = [];
+  const cl = (name, v, [lo, hi]) => { const r = Math.min(hi, Math.max(lo, v)); if (r !== v) clampNotes.push(name + ' ' + v + ' 超出工艺窗口，已钳制为 ' + r); return r; };
+  peak = cl('峰值温度', peak, REFLOW_WINDOW.peak_temp); tal = cl('液相线以上时间', tal, REFLOW_WINDOW.tal);
+  soak = cl('均热区温度', soak, REFLOW_WINDOW.soak_temp); ta183 = cl('183℃以上时间', ta183, REFLOW_WINDOW.time_above_183);
+  rampUp = cl('升温斜率', rampUp, REFLOW_WINDOW.ramp_up); rampDown = cl('降温斜率', rampDown, REFLOW_WINDOW.ramp_down);
+  chain = cl('链速', chain, REFLOW_WINDOW.chain_speed); deltaT = cl('板面温差', deltaT, REFLOW_WINDOW.delta_t);
+  const zoneTime = round3(30 / chain * 60); // 假设单温区长 30cm
+  const zoneTemps = [round3(soak - 55), round3(soak - 25), soak, soak, round3(soak + 8), round3(peak - 18), peak, 110];
+  const zones = zoneTemps.map((tp, i) => ({ zone: i + 1, temp: tp, time: zoneTime }));
+  const curve = []; let t = 0, temp = 25;
+  const seg = (toTemp, rate) => { const dur = Math.abs(toTemp - temp) / Math.abs(rate), steps = Math.max(1, Math.round(dur / 10)); for (let s = 0; s <= steps; s++) curve.push({ t: round3(t + dur * s / steps), temp: round3(temp + (toTemp - temp) * s / steps) }); t += dur; temp = toTemp; };
+  seg(soak, rampUp);
+  t += 60; curve.push({ t: round3(t), temp: soak });
+  seg(peak, rampUp);
+  t += tal / 2; curve.push({ t: round3(t), temp: peak });
+  seg(100, rampDown);
+  const risks = [];
+  if (peak >= 247) risks.push({ defect: '锡珠', level: '中', note: '峰值温度接近窗口上限，锡珠/飞溅风险上升' });
+  if (rampUp >= 2.5) risks.push({ defect: '立碑', level: '中', note: '升温斜率偏大，小元件两端受热不均易立碑' });
+  if (tal >= 75) risks.push({ defect: '桥连', level: '中', note: '液相线以上时间偏长，锡膏流动性强，注意桥连' });
+  if (deltaT >= 12) risks.push({ defect: '虚焊', level: '中', note: '板面温差偏大，大热容元件可能未充分熔化' });
+  if (comp === 'BGA多') risks.push({ defect: '空洞', level: '中', note: 'BGA 较多时关注空洞率，建议结合 X-Ray 抽检' });
+  if (!risks.length) risks.push({ defect: '—', level: '低', note: '当前参数均在工艺窗口中段，无突出缺陷风险（规则提示，非模型预测）' });
+  return { solder, solderCode: REFLOW_SOLDERS[solder], board, comp, peak_temp: peak, tal, ramp_up: rampUp, ramp_down: rampDown, delta_t: deltaT, soak_temp: soak, time_above_183: ta183, chain_speed: chain, zones, curve, risks, clampNotes };
+}
+
+/* ---------- PcbDoc 实验性识别：OLE2/CFB 复合文件头校验 + 流目录列举 ----------
+   .PcbDoc 是 OLE2/CFB 容器，内部按对象类型分子存储（Pads6 / Components6 等，见 external_evidence.md 第 3 节）。
+   本函数只做签名校验 + FAT/目录解析、列出内部条目；记录级坐标解析未实现，调用方必须明确提示。 */
+function inspectCFB(bytes) {
+  const SIG = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0xAE, 0xE1];
+  if (!bytes || bytes.length < 512 || !SIG.every((b, i) => bytes[i] === b)) return { ok: false, isCFB: false, isPcbDoc: false, entries: [], error: '文件头签名不符：不是 OLE2/CFB 复合文件（.PcbDoc 应为该容器）' };
+  try {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const shift = dv.getUint16(30, true), secSize = 1 << shift;
+    const firstDir = dv.getUint32(48, true), numDIFAT = dv.getUint32(72, true);
+    const secOff = sid => (sid + 1) * secSize;
+    const difat = [];
+    for (let i = 0; i < 109; i++) { const v = dv.getUint32(76 + i * 4, true); if (v < 0xFFFFFFFA) difat.push(v); }
+    let nextDIFAT = dv.getUint32(68, true);
+    for (let n = 0; n < numDIFAT && nextDIFAT < 0xFFFFFFFA; n++) {
+      const off = secOff(nextDIFAT); if (off + secSize > bytes.length) break;
+      for (let i = 0; i < secSize / 4 - 1; i++) { const v = dv.getUint32(off + i * 4, true); if (v < 0xFFFFFFFA) difat.push(v); }
+      nextDIFAT = dv.getUint32(off + secSize - 4, true);
+    }
+    const fat = [];
+    for (const fs of difat) { const off = secOff(fs); if (off + secSize > bytes.length) continue; for (let i = 0; i < secSize / 4; i++) fat.push(dv.getUint32(off + i * 4, true)); }
+    const entries = []; const seen = new Set();
+    let sid = firstDir, guard = 0;
+    while (sid < 0xFFFFFFFA && guard++ < 10000 && !seen.has(sid)) {
+      seen.add(sid); const off = secOff(sid); if (off + secSize > bytes.length) break;
+      for (let i = 0; i < secSize / 128; i++) {
+        const eo = off + i * 128, nameLen = dv.getUint16(eo + 64, true);
+        if (nameLen < 2 || nameLen > 64) continue;
+        let name = ''; for (let j = 0; j < nameLen - 2; j += 2) name += String.fromCharCode(dv.getUint16(eo + j, true));
+        const type = bytes[eo + 66];
+        if (name) entries.push({ name, type: type === 5 ? '根存储' : type === 1 ? '存储' : '流', size: dv.getUint32(eo + 120, true) });
+      }
+      sid = fat[sid];
+    }
+    const PCB_NAMES = /^(Pads|Components|Nets|Tracks|Vias|Arcs|Fills|Regions|Texts|Dimensions|Rules|Classes|Board|Connections|FromTos|Embedded|Models|Polygons|ShapeBased|Textures|WideLines|Coordinates)\d*$/;
+    const isPcbDoc = entries.some(e => PCB_NAMES.test(e.name)) || entries.some(e => e.name === 'FileHeader');
+    return { ok: true, isCFB: true, isPcbDoc, entries, error: null };
+  } catch (err) { return { ok: false, isCFB: true, isPcbDoc: false, entries: [], error: 'CFB 目录解析失败：' + err.message }; }
+}
+
+/* ---------- 图片标注数据集导出（YOLO 标注闭环前半段：只做标注与导出，检测/训练需外部服务） ---------- */
+function annotationsToJson(list, meta = {}) {
+  return JSON.stringify({ image: { name: meta.name || '', width: meta.width || 0, height: meta.height || 0 }, note: '本数据集由人工标注导出；训练/检测需外部服务（如 YOLO 检测服务），本软件不做检测', annotations: list.map((a, i) => ({ id: i + 1, type: a.type, x: round3(a.x), y: round3(a.y), w: round3(a.w || 0), h: round3(a.h || 0), label: a.label || '' })) }, null, 2);
+}
+
+/* ---------- 工程序列化 ---------- */
+function serializeProject(p) { return JSON.stringify(p); }
+function deserializeProject(s) { const p = JSON.parse(s); if (!p || !Array.isArray(p.layers)) throw new Error('工程文件格式不对'); return p; }
+
+/* ---------- 样例工程（SPEC 第五节） ---------- */
+function buildSampleData() {
+  const F = (shape, x, y, w, h, name) => ({ k: 'f', shape, x, y, w, h, rot: 0, pol: 'D', ...(name ? { name } : {}) });
+  const paste = [], solder = [], silk = [], outline = [], drill = [];
+  // BGA 8x8 圆焊盘，中心 (15,20)，间距 0.8，直径 0.4
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const x = round3(15 + (c - 3.5) * 0.8), y = round3(20 + (r - 3.5) * 0.8);
+    paste.push(F('C', x, y, 0.4, 0.4, 'U1')); solder.push(F('C', x, y, 0.45, 0.45, 'U1'));
+  }
+  // LED 阵列 4x4，起点 (35,10)，间距 3，焊盘 1.0x0.6
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+    const x = 35 + c * 3, y = 10 + r * 3;
+    paste.push(F('R', x, y, 1.0, 0.6, 'LED' + (r * 4 + c + 1))); solder.push(F('R', x, y, 1.1, 0.7));
+  }
+  // 阻容：R1..R4 (y=32) C1..C4 (y=6)，每颗两焊盘 0.5x0.6，中心距 1.0
+  const chips = [];
+  for (let i = 0; i < 4; i++) { chips.push({ ref: 'R' + (i + 1), x: 8 + i * 8, y: 32 }); chips.push({ ref: 'C' + (i + 1), x: 8 + i * 8, y: 6 }); }
+  for (const ch of chips) {
+    paste.push(F('R', ch.x - 0.5, ch.y, 0.5, 0.6, ch.ref), F('R', ch.x + 0.5, ch.y, 0.5, 0.6, ch.ref));
+    solder.push(F('R', ch.x - 0.5, ch.y, 0.6, 0.7), F('R', ch.x + 0.5, ch.y, 0.6, 0.7));
+    silk.push({ k: 't', x: ch.x, y: ch.y + 1.6, text: ch.ref, w: 1.6, h: 0.8 });
+  }
+  silk.push({ k: 't', x: 15, y: 24.6, text: 'U1', w: 1.6, h: 0.8 });
+  outline.push({ k: 'r', pts: [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 60, y: 40 }, { x: 0, y: 40 }], pol: 'D' });
+  for (const [x, y] of [[3, 3], [57, 3], [3, 37], [57, 37]]) drill.push({ k: 'h', x, y, d: 2 });
+  const layers = [
+    { id: 'L1', name: '锡膏-sample.gtp', fileName: 'sample.gtp', kind: 'paste', side: 'T', visible: true, color: KIND_COLOR.paste, prims: paste },
+    { id: 'L2', name: '阻焊-sample.gts', fileName: 'sample.gts', kind: 'solder', side: 'T', visible: true, color: KIND_COLOR.solder, prims: solder },
+    { id: 'L3', name: '丝印-sample.gto', fileName: 'sample.gto', kind: 'silk', side: 'T', visible: true, color: KIND_COLOR.silk, prims: silk },
+    { id: 'L4', name: '板框-sample.gko', fileName: 'sample.gko', kind: 'outline', side: '-', visible: true, color: KIND_COLOR.outline, prims: outline },
+    { id: 'L5', name: '钻孔-sample.drl', fileName: 'sample.drl', kind: 'drill', side: '-', visible: true, color: KIND_COLOR.drill, prims: drill },
+  ];
+  // CAD：元件坐标（阻容8 + LED16 + U1），故意偏移 (1.5, 1.0)
+  const cad = [];
+  for (const ch of chips) cad.push({ ref: ch.ref, x: ch.x + 1.5, y: ch.y + 1.0, rot: 0, side: 'T' });
+  for (let i = 0; i < 16; i++) cad.push({ ref: 'LED' + (i + 1), x: 35 + (i % 4) * 3 + 1.5, y: 10 + Math.floor(i / 4) * 3 + 1.0, rot: 0, side: 'T' });
+  cad.push({ ref: 'U1', x: 16.5, y: 21.0, rot: 0, side: 'T' });
+  // BOM 原始表（表头 + 5 行：含 2 行未匹配、1 行用量不一致）
+  const bomTable = [
+    ['料号', '规格', '位置', '用量', '名称'],
+    ['R-10K-0603', 'RES10K0603J', 'R1,R2,R3,R4', '4', '电阻'],
+    ['C-2.2UF-0402', 'CAP2.2uF10V0402X5RT=0.5', 'C1,C2,C3,C4', '3', '电容'],
+    ['LED-RED-1608', 'LED红光0603', 'LED1-LED16', '16', '发光二极管'],
+    ['X-OSC-3225', 'XTAL3225-24M', 'X1,X2', '2', '晶振'],
+    ['Y-CONN', 'CONN-USB-TYPEC', 'Y1', '1', '连接器'],
+  ];
+  return {
+    layers, cad, bomTable,
+    board: { w: 60, h: 40, t: 1.6, ox: 0, oy: 0, corner: '左前' },
+    marks: [{ x: 3, y: 3 }, { x: 57, y: 3 }, { x: 3, y: 37 }], markUse: 2,
+    panels: [{ x: 0, y: 0, r: 0, bad: false }],
+  };
+}
+
+return { round3, dist, bboxOf, primBBox, primCenter, crc32, setInflater, unzip, zipStore, parseXLSX, buildXLSX,
+  classifyLayer, KIND_CN, KIND_COLOR, parseGerber, writeGerber, parseDrill, parseCSVText, parseCAD, splitRefs,
+  BOM_ROLES, bomRowsFromTable, alignCadToPads, componentCenters, padsInRect, findSamePads, detectArray, arrayCoords, bgaExtract,
+  pairPadsToCoords, detectPanelsFromBoxes, manualPanels, expandPanels, DEFAULT_SIMPLIFY, parseSpecFields,
+  simplifySpec, checkBomCodes, mergeBom, compareBom, COMPONENT_DB, pkgOfString, autoMatchDb, correctDirections,
+  buildFeederTable, ipcCompare, genPOS, coordsToText, matchRefTiers, serializeProject, deserializeProject, buildSampleData,
+  YAMAHA_RC_NO, chipKind, yamahaLibNo, YAMAHA_ASCII_COLS, genYamahaAscii, genPToolConvDef,
+  deriveGluePrims, stencilSuiteFiles, FIXTURE_DEFAULTS, fixtureLayout, fixtureCompInfo,
+  REFLOW_WINDOW, REFLOW_SOLDERS, REFLOW_DEFECTS, recommendReflow, inspectCFB, annotationsToJson };
+})();
+</script>
+
+<script>
+"use strict";
+/* ============================================================
+   MJ SMT 工作台 — 界面层（DOM/Canvas）
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let LID = 100;
+const newLayerId = () => 'L' + (++LID);
+
+const S = {
+  name: '未命名工程', layers: [], activeLayerId: null, coords: [], cad: [], cadOffset: { x: 0, y: 0 },
+  bomRows: [], bomTable: null, bom2Rows: [],
+  board: { w: 60, h: 40, t: 1.6, ox: 0, oy: 0, corner: '左前' },
+  marks: [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }], markUse: 2,
+  panels: [{ x: 0, y: 0, r: 0, bad: false }], panelPreview: false,
+  sel: new Set(), selCoord: null, view: { cx: 30, cy: 20, scale: 9 },
+  side: 'T', extractMode: true, measureMode: false, measurePts: [],
+  simplifyRules: JSON.parse(JSON.stringify(Core.DEFAULT_SIMPLIFY)),
+  codeLib: { 'C-2.2UF-0402': '2.2UF-10V-0402C-X5R', 'R-10K-0603': '10K-0603R' },
+  customers: [], plans: [], templates: [], ballCoords: [],
+  settings: { stencilT: 0.12, posDia: 0.3, posMirrorX: false, posMirrorY: false, glue: false, glueDia: 1.0 },
+  undoExtract: [], activeTab: 'place', activeMod: 'smt',
+  fixtureParams: null, annotations: [], _imported: false, _exported: false,
+};
+const layerById = id => S.layers.find(l => l.id === id);
+const activeLayer = () => layerById(S.activeLayerId);
+function msg(t) { $('#statusMsg').textContent = t; }
+let toastTimer = null;
+function toast(t, ms = 2600) { const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.style.display = 'none', ms); }
+function download(name, content, mime = 'text/plain') {
+  S._exported = true;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime + ';charset=utf-8' }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ---------- 工程保存/读取 ---------- */
+function projectObj() {
+  return { name: S.name, layers: S.layers, coords: S.coords, cad: S.cad, cadOffset: S.cadOffset, bomRows: S.bomRows,
+    board: S.board, marks: S.marks, markUse: S.markUse, panels: S.panels, simplifyRules: S.simplifyRules,
+    codeLib: S.codeLib, customers: S.customers, plans: S.plans, templates: S.templates, ballCoords: S.ballCoords, settings: S.settings };
+}
+function applyProject(p) {
+  Object.assign(S, { name: p.name || '未命名工程', layers: p.layers || [], coords: p.coords || [], cad: p.cad || [],
+    cadOffset: p.cadOffset || { x: 0, y: 0 }, bomRows: p.bomRows || [], board: p.board || S.board, marks: p.marks || S.marks,
+    markUse: p.markUse ?? 2, panels: p.panels?.length ? p.panels : [{ x: 0, y: 0, r: 0, bad: false }],
+    simplifyRules: p.simplifyRules || S.simplifyRules, codeLib: p.codeLib || {}, customers: p.customers || [],
+    plans: p.plans || [], templates: p.templates || [], ballCoords: p.ballCoords || [], settings: p.settings || S.settings });
+  S.activeLayerId = S.layers[0]?.id || null; S.sel.clear(); S.selCoord = null;
+  $('#projName').textContent = S.name; fitView(); refresh();
+}
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { try { localStorage.setItem('xg-smt-proj', Core.serializeProject(projectObj())); $('#saveState').textContent = '已自动保存 ' + new Date().toLocaleTimeString(); } catch (e) { } }, 400);
+}
+function refresh() { renderLayers(); draw(); renderTab(); updateStatus(); save(); }
+function updateStatus() {
+  const al = activeLayer();
+  $('#stLayer').textContent = al ? al.name : '-';
+  $('#stSel').textContent = S.sel.size;
+  $('#stCoords').textContent = S.coords.length;
+  $('#stZoom').textContent = Math.round(S.view.scale / 9 * 100) + '%';
+}
+
+/* ---------- 画布 ---------- */
+const cv = $('#cv'), ctx = cv.getContext('2d');
+function resizeCanvas() { const r = $('#canvaswrap').getBoundingClientRect(); cv.width = r.width; cv.height = r.height; draw(); }
+new ResizeObserver(resizeCanvas).observe($('#canvaswrap'));
+const W2S = (x, y) => [(x - S.view.cx) * S.view.scale + cv.width / 2, cv.height / 2 - (y - S.view.cy) * S.view.scale];
+const S2W = (px, py) => ({ x: (px - cv.width / 2) / S.view.scale + S.view.cx, y: S.view.cy - (py - cv.height / 2) / S.view.scale });
+function fitView() {
+  let bb = null;
+  for (const l of S.layers) for (const p of l.prims) { const b = Core.primBBox(p); bb = bb ? { x0: Math.min(bb.x0, b.x0), y0: Math.min(bb.y0, b.y0), x1: Math.max(bb.x1, b.x1), y1: Math.max(bb.y1, b.y1) } : b; }
+  if (!bb) { S.view = { cx: 30, cy: 20, scale: 9 }; return; }
+  const w = Math.max(bb.x1 - bb.x0, 1), h = Math.max(bb.y1 - bb.y0, 1);
+  S.view.cx = (bb.x0 + bb.x1) / 2; S.view.cy = (bb.y0 + bb.y1) / 2;
+  S.view.scale = Math.max(0.5, Math.min(cv.width / w, cv.height / h) * 0.92);
+}
+function drawPrim(p, color, lw) {
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw || 1;
+  if (p.k === 'f') {
+    const [x, y] = W2S(p.x, p.y); const w = Math.max(p.w * S.view.scale, 1.5), h = Math.max(p.h * S.view.scale, 1.5);
+    if (p.shape === 'C') { ctx.beginPath(); ctx.arc(x, y, w / 2, 0, 7); ctx.fill(); }
+    else ctx.fillRect(x - w / 2, y - h / 2, w, h);
+  } else if (p.k === 'l') {
+    const [x1, y1] = W2S(p.x1, p.y1), [x2, y2] = W2S(p.x2, p.y2);
+    ctx.lineWidth = Math.max(p.w * S.view.scale, 1); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  } else if (p.k === 'r') {
+    ctx.beginPath(); p.pts.forEach((pt, i) => { const [x, y] = W2S(pt.x, pt.y); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.closePath(); ctx.lineWidth = 1.4; ctx.stroke();
+  } else if (p.k === 't') {
+    const [x, y] = W2S(p.x, p.y); ctx.font = Math.max(9, p.h * S.view.scale) + 'px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(p.text, x, y);
+  } else if (p.k === 'h') {
+    const [x, y] = W2S(p.x, p.y); ctx.beginPath(); ctx.arc(x, y, Math.max(p.d * S.view.scale / 2, 1.5), 0, 7); ctx.stroke();
+  }
+}
+function draw() {
+  if (!cv.width) return;
+  ctx.fillStyle = '#0a0a0c'; ctx.fillRect(0, 0, cv.width, cv.height);
+  // 坐标轴
+  ctx.strokeStyle = '#232329'; ctx.lineWidth = 1;
+  let [ax, ay] = W2S(0, 0); ctx.beginPath(); ctx.moveTo(0, ay); ctx.lineTo(cv.width, ay); ctx.moveTo(ax, 0); ctx.lineTo(ax, cv.height); ctx.stroke();
+  for (let i = S.layers.length - 1; i >= 0; i--) {
+    const l = S.layers[i]; if (!l.visible) continue;
+    l.prims.forEach((p, idx) => {
+      const sel = S.sel.has(l.id + ':' + idx);
+      drawPrim(p, sel ? '#ffffff' : (p.pol === 'C' ? '#3a3b44' : l.color), sel ? 2 : 1);
+    });
+  }
+  // CAD 点（应用重合偏移）
+  if (S.cad.length) {
+    ctx.fillStyle = '#ff5fd2';
+    for (const c of S.cad) { const [x, y] = W2S(c.x + S.cadOffset.x, c.y + S.cadOffset.y); ctx.fillRect(x - 2, y - 2, 4, 4); }
+  }
+  // 拼板展开预览
+  if (S.panelPreview && S.panels.length > 1) {
+    const ex = Core.expandPanels(S.coords, S.panels, S.board, { skipBad: true });
+    ctx.fillStyle = 'rgba(61,123,255,.5)';
+    for (const c of ex) { const [x, y] = W2S(c.x, c.y); ctx.fillRect(x - 2, y - 2, 4, 4); }
+  }
+  // 贴片坐标
+  for (const c of S.coords) {
+    const [x, y] = W2S(c.x, c.y); const on = S.selCoord === c;
+    ctx.strokeStyle = on ? '#fff' : '#ffd34d'; ctx.lineWidth = on ? 2 : 1.2;
+    ctx.beginPath(); ctx.arc(x, y, on ? 7 : 5, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.stroke();
+    if (S.view.scale > 4) { ctx.fillStyle = on ? '#fff' : '#ffd34d'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(c.ref, x + 8, y - 6); }
+  }
+  // MARK
+  ctx.strokeStyle = '#4dd2ff'; ctx.fillStyle = '#4dd2ff'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+  S.marks.slice(0, S.markUse).forEach((m, i) => { if (!m.x && !m.y) return; const [x, y] = W2S(m.x, m.y); ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.stroke(); ctx.fillText('M' + (i + 1), x + 8, y + 3); });
+  // 测量
+  if (S.measurePts.length) { ctx.fillStyle = '#4dd2ff'; for (const p of S.measurePts) { const [x, y] = W2S(p.x, p.y); ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill(); } }
+  updateStatus();
+}
+function hitPrim(wx, wy) {
+  for (const l of S.layers) {
+    if (!l.visible) continue;
+    for (let i = l.prims.length - 1; i >= 0; i--) {
+      const p = l.prims[i]; const b = Core.primBBox(p); const tol = 2 / S.view.scale;
+      if (wx >= b.x0 - tol && wx <= b.x1 + tol && wy >= b.y0 - tol && wy <= b.y1 + tol) return { layer: l, prim: p, idx: i };
+    }
+  }
+  return null;
+}
+function hitCoord(wx, wy) {
+  let best = null, bd = 8 / S.view.scale;
+  for (const c of S.coords) { const d = Math.hypot(c.x - wx, c.y - wy); if (d < bd) { bd = d; best = c; } }
+  return best;
+}
+
+/* 提取：点焊盘 → 坐标（R10/R14） */
+function extractFromPad(layer, prim, openSilk) {
+  const c = Core.primCenter(prim);
+  const side = layer.side === 'B' ? 'B' : 'T';
+  let coord = S.coords.find(e => Math.abs(e.x - c.x) < 0.05 && Math.abs(e.y - c.y) < 0.05 && e.side === side);
+  if (coord) { msg('已更新坐标 ' + coord.ref + '（重抓不产生重复）'); }
+  else {
+    coord = { ref: '', x: Core.round3(c.x), y: Core.round3(c.y), rot: 0, side, partNo: '', spec: '', pkg: '', _pads: [] };
+    if (prim.name) {
+      coord.ref = prim.name;
+      const prev = S.coords.find(e => e.ref === prim.name);
+      if (prev) { // 同元件另一焊盘：坐标移到两焊盘中点
+        prev._pads = prev._pads || [{ x: prev.x, y: prev.y }];
+        prev._pads.push({ x: coord.x, y: coord.y });
+        prev.x = Core.round3(prev._pads.reduce((s, p) => s + p.x, 0) / prev._pads.length);
+        prev.y = Core.round3(prev._pads.reduce((s, p) => s + p.y, 0) / prev._pads.length);
+        if (prev._pads.length === 2) prev.padAngle = Core.round3(Math.atan2(prev._pads[1].y - prev._pads[0].y, prev._pads[1].x - prev._pads[0].x) * 180 / Math.PI);
+        coord = prev; msg('坐标 ' + coord.ref + ' 已按焊盘组更新中心');
+      } else S.coords.push(coord);
+    } else {
+      coord.ref = 'A_' + (S.coords.filter(e => /^A_/.test(e.ref)).length + 1);
+      S.coords.push(coord); msg('已提取坐标 ' + coord.ref + ' (' + coord.x + ', ' + coord.y + ')');
+    }
+    S.undoExtract.push(coord.ref);
+  }
+  S.selCoord = coord;
+  if (openSilk) openSilkDlg(coord);
+  refresh();
+}
+
+/* 画布交互 */
+let drag = null;
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top;
+  const w0 = S2W(mx, my); const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  S.view.scale = Math.min(300, Math.max(0.3, S.view.scale * f));
+  const w1 = S2W(mx, my); S.view.cx += w0.x - w1.x; S.view.cy += w0.y - w1.y;
+  draw();
+}, { passive: false });
+cv.addEventListener('mousedown', e => {
+  const r = cv.getBoundingClientRect(); const px = e.clientX - r.left, py = e.clientY - r.top;
+  drag = { x: px, y: py, moved: false, pan: e.button === 1 || e.spaceKey, button: e.button, wx: S2W(px, py) };
+  if (e.button === 1) e.preventDefault();
+});
+cv.addEventListener('mousemove', e => {
+  const r = cv.getBoundingClientRect(); const px = e.clientX - r.left, py = e.clientY - r.top;
+  const w = S2W(px, py);
+  $('#stX').textContent = w.x.toFixed(3); $('#stY').textContent = w.y.toFixed(3);
+  $('#roCur').textContent = w.x.toFixed(3) + ', ' + w.y.toFixed(3);
+  if (!drag) return;
+  if (Math.abs(px - drag.x) + Math.abs(py - drag.y) > 3) drag.moved = true;
+  if (drag.pan && drag.moved) { S.view.cx -= (px - drag.x) / S.view.scale; S.view.cy += (py - drag.y) / S.view.scale; drag.x = px; drag.y = py; draw(); }
+  else if (drag.moved && drag.button === 0) {
+    draw();
+    const x0 = Math.min(drag.x, px), y0 = Math.min(drag.y, py), x1 = Math.max(drag.x, px), y1 = Math.max(drag.y, py);
+    ctx.strokeStyle = '#3d7bff'; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    drag.rect = { x0, y0, x1, y1 };
+  }
+});
+cv.addEventListener('mouseup', e => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.pan) return;
+  const w = d.wx;
+  if (S.measureMode && d.button === 0 && !d.moved) {
+    S.measurePts.push({ x: Core.round3(w.x), y: Core.round3(w.y) });
+    if (S.measurePts.length === 2) {
+      const [a, b] = S.measurePts;
+      const dd = Math.hypot(b.x - a.x, b.y - a.y);
+      $('#roMeas').textContent = dd.toFixed(3) + ' mm';
+      $('#roAng').textContent = (Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI).toFixed(2) + '°';
+      msg('测量距离 ' + dd.toFixed(3) + 'mm'); S.measurePts = [];
+    }
+    draw(); return;
+  }
+  if (d.button === 0 && !d.moved) {
+    const hc = hitCoord(w.x, w.y);
+    if (hc) { S.selCoord = hc; $('#roCenter').textContent = hc.x + ', ' + hc.y; renderTab(); draw(); return; }
+    const hit = hitPrim(w.x, w.y);
+    if (hit) {
+      S.activeLayerId = hit.layer.id;
+      if (S.extractMode && hit.prim.k === 'f') { extractFromPad(hit.layer, hit.prim, false); return; }
+      const key = hit.layer.id + ':' + hit.idx;
+      e.ctrlKey ? (S.sel.has(key) ? S.sel.delete(key) : S.sel.add(key)) : (S.sel.clear(), S.sel.add(key));
+      if (hit.prim.k === 'f') { const c = Core.primCenter(hit.prim); $('#roCenter').textContent = c.x + ', ' + c.y; }
+    } else if (!e.ctrlKey) { S.sel.clear(); S.selCoord = null; }
+    refresh(); return;
+  }
+  if (d.button === 0 && d.moved && d.rect) {
+    const a = S2W(d.rect.x0, d.rect.y0), b = S2W(d.rect.x1, d.rect.y1);
+    const rect = { x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) };
+    if (!e.ctrlKey) S.sel.clear();
+    for (const l of S.layers) { if (!l.visible) continue; l.prims.forEach((p, i) => { const c = Core.primCenter(p); if (c.x >= rect.x0 && c.x <= rect.x1 && c.y >= rect.y0 && c.y <= rect.y1) S.sel.add(l.id + ':' + i); }); }
+    msg('框选 ' + S.sel.size + ' 个图元'); refresh();
+  }
+});
+cv.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect(); const w = S2W(e.clientX - r.left, e.clientY - r.top);
+  if (!S.extractMode) { toast('坐标提取已关闭（工具栏「坐标提取」打开后可右键提取）'); return; }
+  const hit = hitPrim(w.x, w.y);
+  if (hit && hit.prim.k === 'f') extractFromPad(hit.layer, hit.prim, true);
+});
+window.addEventListener('keydown', e => {
+  if (e.key === ' ') cv.spaceKey = true;
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && window.__silkOpen) { silkUndo(); if ($('#silkBody')) renderSilk(); }
+});
+window.addEventListener('keyup', e => { if (e.key === ' ') cv.spaceKey = false; });
+
+/* ---------- 图层面板 ---------- */
+function renderLayers() {
+  const el = $('#layerlist'); el.innerHTML = '';
+  S.layers.forEach((l, li) => {
+    const row = document.createElement('div');
+    row.className = 'lrow' + (l.id === S.activeLayerId ? ' on' : '') + (l.error ? ' err' : '');
+    row.innerHTML = `<input type="checkbox" ${l.visible ? 'checked' : ''}>
+      <span class="sw" style="background:${l.color}"></span>
+      <span class="pill">${l.side}</span><span class="nm" title="${esc(l.name)}${l.error ? ' — ' + esc(l.error) : ''}">${esc(l.name)}</span>
+      <span class="cnt">${l.error ? '解析失败' : l.prims.length}</span>`;
+    row.querySelector('input').addEventListener('change', ev => { l.visible = ev.target.checked; draw(); save(); });
+    row.querySelector('.sw').addEventListener('click', ev => {
+      ev.stopPropagation();
+      const inp = document.createElement('input'); inp.type = 'color'; inp.value = l.color;
+      inp.addEventListener('input', () => { l.color = inp.value; draw(); }); inp.click();
+    });
+    row.addEventListener('click', () => { S.activeLayerId = l.id; renderLayers(); updateStatus(); });
+    el.appendChild(row);
+  });
+}
+$('#lpAdd').addEventListener('click', () => {
+  const l = { id: newLayerId(), name: '新层-' + (S.layers.length + 1), fileName: '', kind: 'unknown', side: 'T', visible: true, color: '#7a7b88', prims: [] };
+  S.layers.push(l); S.activeLayerId = l.id; refresh();
+});
+$('#lpDel').addEventListener('click', () => { const l = activeLayer(); if (!l) return; S.layers = S.layers.filter(x => x !== l); S.activeLayerId = S.layers[0]?.id || null; refresh(); msg('已删除层 ' + l.name); });
+$('#lpUp').addEventListener('click', () => moveLayer(-1));
+$('#lpDown').addEventListener('click', () => moveLayer(1));
+function moveLayer(d) { const i = S.layers.findIndex(l => l.id === S.activeLayerId); const j = i + d; if (i < 0 || j < 0 || j >= S.layers.length) return;[S.layers[i], S.layers[j]] = [S.layers[j], S.layers[i]]; refresh(); }
+$('#lpFlip').addEventListener('click', () => {
+  const l = activeLayer(); if (!l || !l.prims.length) { toast('先选中一个有内容的层'); return; }
+  let bb = null; for (const p of l.prims) { const b = Core.primBBox(p); bb = bb ? { x0: Math.min(bb.x0, b.x0), x1: Math.max(bb.x1, b.x1) } : b; }
+  const cx = (bb.x0 + bb.x1) / 2;
+  const prims = l.prims.map(p => {
+    const q = JSON.parse(JSON.stringify(p));
+    if (q.k === 'f' || q.k === 't' || q.k === 'h') q.x = Core.round3(2 * cx - q.x);
+    if (q.k === 'l') { q.x1 = Core.round3(2 * cx - q.x1); q.x2 = Core.round3(2 * cx - q.x2); }
+    if (q.k === 'r') q.pts = q.pts.map(pt => ({ x: Core.round3(2 * cx - pt.x), y: pt.y }));
+    return q;
+  });
+  const nl = { id: newLayerId(), name: l.name + '-翻转', fileName: l.fileName, kind: l.kind, side: l.side === 'T' ? 'B' : 'T', visible: true, color: l.color, prims };
+  S.layers.push(nl); refresh(); msg('已生成翻转层 ' + nl.name + '（' + prims.length + ' 图元）');
+});
+$('#lpMerge').addEventListener('click', () => {
+  const targets = S.layers.filter(l => l.visible && l.prims.length);
+  if (!targets.length) { toast('没有可合并的可见层'); return; }
+  const prims = targets.flatMap(l => l.prims);
+  download('merged.ger', Core.writeGerber(prims, 'merged'));
+  msg('已合并导出 ' + targets.length + ' 层 / ' + prims.length + ' 图元');
+});
+$('#btnMeasure').addEventListener('click', e => { S.measureMode = !S.measureMode; e.target.classList.toggle('on', S.measureMode); S.measurePts = []; msg(S.measureMode ? '测量模式：点两点测距' : '测量模式关'); });
+
+/* ---------- 右侧页签 ---------- */
+$$('#tabs .tab').forEach(t => t.addEventListener('click', () => { S.activeTab = t.dataset.tab; $$('#tabs .tab').forEach(x => x.classList.toggle('on', x === t)); renderTab(); }));
+function renderTab() {
+  const el = $('#tabbody');
+  ({ place: renderPlaceTab, board: renderBoardTab, comp: renderCompTab, feeder: renderFeederTab, cfg: renderCfgTab })[S.activeTab](el);
+}
+function renderPlaceTab(el) {
+  const rows = S.coords.map((c, i) => `<tr data-i="${i}" class="${S.selCoord === c ? 'sel' : ''}"><td>${i + 1}</td><td>${esc(c.ref)}</td><td>${c.x}</td><td>${c.y}</td><td>${c.rot}</td><td>${c.side}</td><td>${esc(c.partNo)}</td></tr>`).join('');
+  el.innerHTML = `
+  <div class="sec"><div class="btnrow">
+    <input id="findTxt" placeholder="查找位号/料号" style="flex:1"><button id="findBtn">查找</button>
+    <label class="pill"><input type="checkbox" id="chkSelOnly"> 只显示选择</label></div>
+  <div class="btnrow">
+    <button id="ptPair">选中焊盘配对提取</button><button id="ptArray">阵列提取</button><button id="ptBga">倒装BGA提取</button>
+    <button id="ptUndo">撤销上次提取</button><button id="ptDel">删除选中坐标</button>
+  </div>
+  <div class="note">左键点焊盘=提取坐标，右键=提取并写位号；框选焊盘后可用上方批量提取。抓错直接再点一次即更新（不产生重复）。</div></div>
+  <div class="sec"><table><thead><tr><th>#</th><th>位号</th><th>X</th><th>Y</th><th>角度</th><th>面</th><th>料号</th></tr></thead><tbody>${rows || '<tr><td colspan=7 class="note">暂无坐标</td></tr>'}</tbody></table></div>`;
+  el.querySelectorAll('tbody tr[data-i]').forEach(tr => tr.addEventListener('click', () => {
+    S.selCoord = S.coords[+tr.dataset.i]; $('#roCenter').textContent = S.selCoord.x + ', ' + S.selCoord.y;
+    S.view.cx = S.selCoord.x; S.view.cy = S.selCoord.y; refresh();
+  }));
+  $('#findBtn').addEventListener('click', () => {
+    const q = $('#findTxt').value.trim().toLowerCase(); if (!q) return;
+    const hit = S.coords.find(c => c.ref.toLowerCase().includes(q) || (c.partNo || '').toLowerCase().includes(q));
+    if (hit) { S.selCoord = hit; S.view.cx = hit.x; S.view.cy = hit.y; msg('跑点定位 ' + hit.ref); refresh(); } else toast('没找到 ' + q);
+  });
+  $('#ptPair').addEventListener('click', () => {
+    const pads = selectedPrims().filter(p => p.prim.k === 'f');
+    if (pads.length < 2) { toast('先框选至少 2 个焊盘'); return; }
+    const coords = Core.pairPadsToCoords(pads.map(p => p.prim), nextRefPrefix());
+    coords.forEach(c => { if (!S.coords.some(e => Math.abs(e.x - c.x) < 0.05 && Math.abs(e.y - c.y) < 0.05)) { S.coords.push(c); S.undoExtract.push(c.ref); } });
+    msg('配对提取新增 ' + coords.length + ' 个坐标'); refresh();
+  });
+  $('#ptArray').addEventListener('click', () => {
+    const pads = selectedPrims().filter(p => p.prim.k === 'f').map(p => p.prim);
+    if (pads.length < 4) { toast('先框选一片规则阵列焊盘'); return; }
+    const a = Core.detectArray(pads);
+    const coords = Core.arrayCoords(pads, nextRefPrefix());
+    let add = 0;
+    coords.forEach(c => { if (!S.coords.some(e => Math.abs(e.x - c.x) < 0.05 && Math.abs(e.y - c.y) < 0.05)) { S.coords.push(c); S.undoExtract.push(c.ref); add++; } });
+    msg(`阵列提取：${a.rows} 行 × ${a.cols} 列，间距 ${a.pitchX}×${a.pitchY}，新增 ${add} 个`); refresh();
+  });
+  $('#ptBga').addEventListener('click', () => doBgaExtract());
+  $('#ptUndo').addEventListener('click', () => {
+    const ref = S.undoExtract.pop(); if (!ref) { toast('没有可撤销的提取'); return; }
+    S.coords = S.coords.filter(c => c.ref !== ref); msg('已撤销提取 ' + ref); refresh();
+  });
+  $('#ptDel').addEventListener('click', () => { if (S.selCoord) { S.coords = S.coords.filter(c => c !== S.selCoord); S.selCoord = null; refresh(); } });
+}
+function selectedPrims() {
+  const out = [];
+  for (const key of S.sel) { const [lid, idx] = key.split(':'); const l = layerById(lid); if (l && l.prims[+idx]) out.push({ layer: l, prim: l.prims[+idx], idx: +idx }); }
+  return out;
+}
+let tempRefN = 0;
+function nextRefPrefix() { return 'LED'; }
+function doBgaExtract() {
+  const pads = selectedPrims().filter(p => p.prim.k === 'f').map(p => p.prim);
+  if (!pads.length) { toast('先框选 BGA 圆形焊盘阵列'); return; }
+  const r = Core.bgaExtract(pads, S.coords, null);
+  r.coords.forEach(c => { S.coords.push(c); S.ballCoords.push(c); });
+  msg(`倒装BGA：新增 ${r.added} 个球位，重复跳过 ${r.skipped} 个`); refresh();
+}
+function renderBoardTab(el) {
+  const b = S.board;
+  el.innerHTML = `
+  <div class="sec"><h4>基板设置</h4>
+    <div class="kv"><span>尺寸 X</span><input type="number" id="bdW" value="${b.w}"><span>尺寸 Y</span><input type="number" id="bdH" value="${b.h}"></div>
+    <div class="kv"><span>厚度</span><input type="number" id="bdT" step="0.1" value="${b.t}"><span>基准角</span><select id="bdCorner"><option ${b.corner === '左前' ? 'selected' : ''}>左前</option><option ${b.corner === '右前' ? 'selected' : ''}>右前</option><option ${b.corner === '左后' ? 'selected' : ''}>左后</option><option ${b.corner === '右后' ? 'selected' : ''}>右后</option></select></div>
+    <div class="kv"><span>偏移 X</span><input type="number" id="bdOX" step="0.1" value="${b.ox}"><span>偏移 Y</span><input type="number" id="bdOY" step="0.1" value="${b.oy}"></div>
+    <div class="btnrow"><button id="bdCopy">复制另一面尺寸</button><button id="bdApply" class="acc">应用</button></div></div>
+  <div class="sec"><h4>MARK 点</h4>
+    ${S.marks.map((m, i) => `<div class="kv"><span>MARK${i + 1} X</span><input type="number" step="0.1" id="mkX${i}" value="${m.x}"><span>Y</span><input type="number" step="0.1" id="mkY${i}" value="${m.y}"></div>`).join('')}
+    <div class="btnrow"><button id="mkFromSel">从选中对象中心设 MARK</button>
+    <label class="pill"><input type="radio" name="mkUse" value="2" ${S.markUse === 2 ? 'checked' : ''}> 使用两个 MARK</label>
+    <label class="pill"><input type="radio" name="mkUse" value="3" ${S.markUse === 3 ? 'checked' : ''}> 使用三个 MARK</label>
+    <button id="mkCheck">检查</button></div>
+    <div class="note" id="mkMsg"></div></div>
+  <div class="sec"><h4>拼板</h4>
+    <div class="btnrow"><button id="pnSmart">智能拼板</button><button id="pnManual">手动拼板</button><button id="pnAdd">加一行</button><button id="pnCopy">复制另一面拼板</button></div>
+    <div class="kv"><span>X 个数</span><input type="number" id="pnNX" value="2"><span>Y 个数</span><input type="number" id="pnNY" value="2"></div>
+    <div class="kv"><span>间距 X</span><input type="number" id="pnPX" step="0.1" value="${b.w + 5}"><span>间距 Y</span><input type="number" id="pnPY" step="0.1" value="${b.h + 5}"></div>
+    <div class="btnrow"><select id="pnSort"><option value="x">排序：按 X</option><option value="y">排序：按 Y</option><option value="xy">排序：先 Y 后 X</option><option value="rev">排序：反序</option></select>
+    <button id="pnClear">清空</button><label class="pill"><input type="checkbox" id="pnPrev" ${S.panelPreview ? 'checked' : ''}> 展开预览</label></div>
+    <table><thead><tr><th>#</th><th>X</th><th>Y</th><th>R</th><th>阴阳</th><th>坏板</th><th></th></tr></thead><tbody>
+    ${S.panels.map((p, i) => `<tr><td>${i + 1}</td><td><input type="number" step="0.1" data-pn="${i}" data-f="x" value="${p.x}" style="width:60px"></td><td><input type="number" step="0.1" data-pn="${i}" data-f="y" value="${p.y}" style="width:60px"></td><td><select data-pn="${i}" data-f="r"><option value="0" ${p.r === 0 ? 'selected' : ''}>0</option><option value="180" ${p.r === 180 ? 'selected' : ''}>180</option></select></td><td><input type="checkbox" data-pn="${i}" data-f="flip" ${p.flip ? 'checked' : ''}></td><td><input type="checkbox" data-pn="${i}" data-f="bad" ${p.bad ? 'checked' : ''}></td><td><button data-del="${i}">删</button></td></tr>`).join('')}
+    </tbody></table>
+    <div class="note">坏板：勾选后输出时跳过该拼板坐标。阴阳板 = R=180 且勾「阴阳」（面别翻转）。展开统计：${Core.expandPanels(S.coords, S.panels, S.board, {}).length} 个坐标。</div></div>`;
+  const applyBoard = () => { b.w = +$('#bdW').value || b.w; b.h = +$('#bdH').value || b.h; b.t = +$('#bdT').value || b.t; b.ox = +$('#bdOX').value || 0; b.oy = +$('#bdOY').value || 0; b.corner = $('#bdCorner').value; refresh(); };
+  $('#bdApply').addEventListener('click', applyBoard);
+  $('#bdCopy').addEventListener('click', () => { msg('已复制另一面尺寸（同尺寸 ' + b.w + '×' + b.h + '）'); toast('另一面基板尺寸已同步'); });
+  el.querySelectorAll('[id^=mkX],[id^=mkY]').forEach(inp => inp.addEventListener('change', () => {
+    S.marks.forEach((m, i) => { m.x = +($('#mkX' + i).value) || 0; m.y = +($('#mkY' + i).value) || 0; }); draw(); save();
+  }));
+  el.querySelectorAll('[name=mkUse]').forEach(r => r.addEventListener('change', () => { S.markUse = +r.value; draw(); save(); }));
+  $('#mkFromSel').addEventListener('click', () => {
+    const sel = selectedPrims(); const c = S.selCoord || (sel.length ? Core.primCenter(sel[0].prim) : null);
+    if (!c) { toast('先选中一个对象或坐标'); return; }
+    const i = S.marks.findIndex(m => !m.x && !m.y); const idx = i < 0 ? 0 : i;
+    S.marks[idx] = { x: Core.round3(c.x), y: Core.round3(c.y) };
+    msg(`MARK${idx + 1} 已设为 (${S.marks[idx].x}, ${S.marks[idx].y})，来自选中对象中心`); refresh();
+  });
+  $('#mkCheck').addEventListener('click', () => {
+    const need = S.markUse; const okN = S.marks.slice(0, need).filter(m => m.x || m.y).length;
+    $('#mkMsg').textContent = okN >= need ? '检查通过：MARK 已设齐' : `请设置 MARK1 和 MARK2 后检查（当前 ${okN}/${need}）`;
+  });
+  el.querySelectorAll('[data-pn]').forEach(inp => inp.addEventListener('change', () => {
+    const p = S.panels[+inp.dataset.pn]; const f = inp.dataset.f;
+    p[f] = inp.type === 'checkbox' ? inp.checked : (f === 'r' ? +inp.value : +inp.value || 0); refresh();
+  }));
+  el.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', () => { S.panels.splice(+btn.dataset.del, 1); if (!S.panels.length) S.panels = [{ x: 0, y: 0, r: 0, bad: false }]; refresh(); }));
+  $('#pnAdd').addEventListener('click', () => { S.panels.push({ x: 0, y: 0, r: 0, bad: false }); refresh(); });
+  $('#pnClear').addEventListener('click', () => { S.panels = [{ x: 0, y: 0, r: 0, bad: false }]; refresh(); });
+  $('#pnCopy').addEventListener('click', () => { S.panels = S.panels.map(p => ({ ...p, flip: !p.flip })); msg('已复制为另一面拼板（面别翻转）'); refresh(); });
+  $('#pnManual').addEventListener('click', () => { S.panels = Core.manualPanels(+$('#pnNX').value || 1, +$('#pnNY').value || 1, +$('#pnPX').value || 0, +$('#pnPY').value || 0); msg('手动拼板已生成 ' + S.panels.length + ' 块'); refresh(); });
+  $('#pnSmart').addEventListener('click', () => smartPanel());
+  $('#pnSort').addEventListener('change', e => {
+    const v = e.target.value;
+    if (v === 'x') S.panels.sort((a, b) => a.x - b.x); else if (v === 'y') S.panels.sort((a, b) => a.y - b.y);
+    else if (v === 'xy') S.panels.sort((a, b) => (a.y - b.y) || (a.x - b.x)); else S.panels.reverse();
+    refresh();
+  });
+  $('#pnPrev').addEventListener('change', e => { S.panelPreview = e.target.checked; draw(); });
+}
+function smartPanel() {
+  const ol = S.layers.find(l => l.kind === 'outline');
+  const boxes = ol ? ol.prims.filter(p => p.k === 'r').map(p => Core.primBBox(p)) : [];
+  if (boxes.length > 1) { S.panels = Core.detectPanelsFromBoxes(boxes); msg('智能拼板：识别出 ' + S.panels.length + ' 块'); }
+  else { S.panels = Core.manualPanels(2, 2, S.board.w + 5, S.board.h + 5); msg('智能拼板：未识别到重复板框，按 2×2 生成（可在基板页改个数/间距）'); }
+  refresh();
+}
+function renderCompTab(el) {
+  const groups = new Map();
+  for (const c of S.coords) { const k = c.partNo || '(未合并BOM)'; if (!groups.has(k)) groups.set(k, { partNo: k, spec: c.spec || '', pkg: c.pkg || Core.pkgOfString(c.spec), refs: [], dbId: c.dbId ?? -1 }); const g = groups.get(k); g.refs.push(c.ref); if (c.dbId != null) g.dbId = c.dbId; }
+  const list = [...groups.values()];
+  el.innerHTML = `<div class="sec"><div class="note">当前面别共有 ${list.length} 种物料。选中物料后右键查询机器数据库。</div>
+  <div class="btnrow"><button id="cmAuto" class="acc">自动匹配元件库</button><button id="cmTpl">存为焊盘模板</button><button id="cmTplFind">按模板查找</button></div>
+  <div class="note" id="cmMsg"></div></div>
+  <table><thead><tr><th>库编号</th><th>规格</th><th>料号</th><th>封装</th><th>位置</th><th>用量</th></tr></thead><tbody>
+  ${list.map((g, i) => `<tr data-g="${i}"><td>${g.dbId}</td><td>${esc(g.spec)}</td><td>${esc(g.partNo)}</td><td>${esc(g.pkg)}</td><td title="${esc(g.refs.join(','))}">${esc(g.refs.slice(0, 4).join(','))}${g.refs.length > 4 ? '…' : ''}</td><td>${g.refs.length}</td></tr>`).join('') || '<tr><td colspan=6 class="note">暂无元件</td></tr>'}
+  </tbody></table>`;
+  el.querySelectorAll('tbody tr[data-g]').forEach(tr => tr.addEventListener('contextmenu', e => {
+    e.preventDefault(); const g = list[+tr.dataset.g];
+    showCtx(e.clientX, e.clientY, [
+      { label: '查询匹配元件数据库', fn: () => { const r = Core.autoMatchDb([g]); S.coords.forEach(c => { if ((c.partNo || '(未合并BOM)') === g.partNo) c.dbId = g.dbId; }); $('#cmMsg').textContent = g.dbId >= 0 ? '已匹配：库编号 ' + g.dbId : '未匹配（编号 -1）'; refresh(); } },
+      { label: '清空本行数据库编号', fn: () => { g.dbId = -1; S.coords.forEach(c => { if ((c.partNo || '(未合并BOM)') === g.partNo) c.dbId = -1; }); refresh(); } },
+    ]);
+  }));
+  $('#cmAuto').addEventListener('click', () => {
+    const r = Core.autoMatchDb(S.coords);
+    msg(`匹配完成：成功 ${r.ok} 个坐标，未匹配 ${r.fail} 个`); refresh();
+  });
+  $('#cmTpl').addEventListener('click', () => saveTemplate());
+  $('#cmTplFind').addEventListener('click', () => findByTemplate());
+}
+function renderFeederTab(el) {
+  const rows = Core.buildFeederTable(S.coords);
+  el.innerHTML = `<div class="sec"><div class="note">站位表（通用口径）：按料号分组自动编站位，飞达类型按封装尺寸推断。</div>
+  <div class="btnrow"><button id="fdCsv">导出站位表 CSV</button></div></div>
+  <table><thead><tr><th>站位</th><th>料号</th><th>规格</th><th>封装</th><th>用量</th><th>飞达</th></tr></thead><tbody>
+  ${rows.map(r => `<tr><td>${r.station}</td><td>${esc(r.partNo)}</td><td>${esc(r.spec)}</td><td>${esc(r.pkg)}</td><td>${r.qty}</td><td>${r.feeder}</td></tr>`).join('') || '<tr><td colspan=6 class="note">暂无坐标</td></tr>'}
+  </tbody></table>`;
+  $('#fdCsv').addEventListener('click', () => {
+    const txt = '站位,料号,规格,封装,用量,飞达\n' + rows.map(r => [r.station, r.partNo, r.spec, r.pkg, r.qty, r.feeder].join(',')).join('\n');
+    download('站位表.csv', txt, 'text/csv');
+  });
+}
+function renderCfgTab(el) {
+  el.innerHTML = `<div class="sec"><h4>处理参数</h4>
+  <div class="kv2"><span>钢网厚度 mm</span><input type="number" id="cfT" step="0.01" value="${S.settings.stencilT}"></div>
+  <div class="kv2"><span>POS 标准球径 mm</span><input type="number" id="cfDia" step="0.01" value="${S.settings.posDia}"></div>
+  <div class="kv2"><span>红胶</span><span><label class="pill"><input type="checkbox" id="cfGlue" ${S.settings.glue ? 'checked' : ''}> 导入锡膏层时派生红胶层</label></span></div>
+  <div class="kv2"><span>胶点直径 mm</span><input type="number" id="cfGlueDia" step="0.1" value="${S.settings.glueDia || 1.0}"></div>
+  <div class="kv2"><span>位号匹配档位</span><select id="cfTier"><option>档1·严格(3mm)</option><option selected>档2·标准(8mm同类型)</option><option>档3·宽松(12mm)</option></select></div>
+  <div class="btnrow"><button id="cfSave" class="acc">保存参数</button><button id="cfNotdo">未做/部分清单</button></div>
+  <div class="note">工程自动存于本机浏览器（localStorage），也可从「文件」菜单导出/导入工程 JSON。数据不出本机。</div></div>
+  <div class="sec"><h4>品牌</h4><div class="kv2"><span>工作台名称</span><input id="cfBrand" value="MJ SMT 编程工作台"></div>
+  <div class="note">默认品牌为 MJ，可自行改名（仅本机显示）。</div></div>`;
+  $('#cfSave').addEventListener('click', () => { S.settings.stencilT = +$('#cfT').value || 0.12; S.settings.posDia = +$('#cfDia').value || 0.3; S.settings.glue = $('#cfGlue').checked; S.settings.glueDia = +$('#cfGlueDia').value || 1.0; msg('参数已保存'); save(); });
+  $('#cfNotdo').addEventListener('click', () => showNotDo());
+}
+function showNotDo() {
+  showDlg('未做 / 部分实现清单（v2，如实挂账）', `<div style="line-height:2">
+  1. 丝印图像 OCR 引擎本身 —— 未做；补正窗三引擎（普通/填充/快速 OCR）为工作流占位，识别 = 位号↔坐标匹配<br>
+  2. YOLO 检测与训练 —— 未做（需外部服务）；「图片标注」页已做标注 + 数据集 JSON 导出（闭环前半段）<br>
+  3. 治具 3D 模型生成（STL/GLB） —— 未做；治具页已做 zhiju 参数体系 + 2D 俯视示意 + 元件信息卡 + 参数导出<br>
+  4. 雅马哈原生 .ygx —— 未做且无公开规范可依；已改 P-Tool 路线：出 ASCII 贴装数据 + 转换定义说明，.ygx 由 P-Tool 生成<br>
+  5. 回流焊 AI 推荐（贝叶斯/ML 模型） —— 未做；已做按 reflow_ai 工艺窗口的规则推荐 + 曲线图<br>
+  6. 读取程序 —— 未做（原产品下拉从未展开，格式证据不足）<br>
+  7. 账号/云端/多租户 —— 本地单机<br>
+  8. PcbDoc 完整解析 —— 实验性：仅 OLE2/CFB 文件头校验 + 内部流列举，坐标/焊盘记录解析未做</div>`, [{ label: '知道了' }]);
+}
+/* ---------- 处理明细（sean_gaps.md ⑥实证：上传→解压→整理→翻转→AI识别→处理→合并→下载） ---------- */
+function openProcessDetailDlg() {
+  const hasB = S.layers.some(l => l.side === 'B');
+  const steps = [
+    { name: '上传', done: S._imported || S.layers.length > 0, info: '已载入 ' + S.layers.length + ' 个图层' },
+    { name: '解压', done: S.layers.length > 0, info: 'ZIP/多文件已展开为图层' },
+    { name: '整理', done: S.layers.some(l => l.kind !== 'unknown'), info: '自动分层：' + (S.layers.map(l => Core.KIND_CN[l.kind] || l.kind).join(' / ') || '无') },
+    { name: '翻转', done: hasB, info: hasB ? '已有底层（B 面）图层' : '暂无 B 面图层（单面板可跳过此步）' },
+    { name: 'AI识别', done: S.coords.length > 0, info: '已提取坐标 ' + S.coords.length + ' 个（本软件为规则提取，非 AI 模型）' },
+    { name: '处理', done: !!S.procLayerId, info: S.procLayerId ? '已生成处理后锡膏层' : '未做钢网开口处理' },
+    { name: '合并', done: S.panels.length > 1, info: '拼板 ' + S.panels.length + ' 块' },
+    { name: '下载', done: S._exported, info: S._exported ? '本次会话已导出过文件' : '尚未导出' },
+  ];
+  const cur = steps.findIndex(s => !s.done);
+  const bar = steps.map((s, i) => `${i ? '<span class="farr">→</span>' : ''}<span class="fst ${s.done ? 'done' : i === cur ? 'cur' : ''}">${s.name}</span>`).join('');
+  showDlg('处理明细（8 步流程）', `<div class="flowbar">${bar}</div>
+    <div class="note" style="line-height:2">${steps.map(s => `[${s.done ? 'SUCCESS' : 'INFO'}] ${s.name}：${esc(s.info)}`).join('<br>')}</div>
+    <div class="note">流程步名与图例（已完成=绿 / 当前步=高亮 / 未完成=灰）照 SEAN 主系统「处理明细」弹窗实证；各步完成状态按当前工程实际状态推断。</div>`, [{ label: '关闭' }], true);
+}
+function showCtx(x, y, items) {
+  const m = $('#ctxmenu'); m.innerHTML = '';
+  items.forEach(it => { const d = document.createElement('div'); d.className = 'mi'; d.textContent = it.label; d.addEventListener('click', () => { m.style.display = 'none'; it.fn(); }); m.appendChild(d); });
+  m.style.display = 'block'; m.style.left = x + 'px'; m.style.top = y + 'px';
+}
+document.addEventListener('click', e => { if (!e.target.closest('#ctxmenu')) $('#ctxmenu').style.display = 'none'; });
+
+/* ---------- 通用弹窗 ---------- */
+function showDlg(title, bodyHTML, buttons, wide) {
+  $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = bodyHTML;
+  $('#dlg').classList.toggle('wide', !!wide);
+  const foot = $('#dlgFoot'); foot.innerHTML = '';
+  (buttons && buttons.length ? buttons : [{ label: '关闭' }]).forEach(b => {
+    const btn = document.createElement('button'); btn.textContent = b.label; if (b.cls) btn.className = b.cls;
+    btn.addEventListener('click', () => { if (!b.fn || b.fn() !== false) closeDlg(); });
+    foot.appendChild(btn);
+  });
+  $('#mask').classList.add('open');
+  return $('#dlgBody');
+}
+function closeDlg() { $('#mask').classList.remove('open'); window.__silkOpen = false; }
+$('#dlgX').addEventListener('click', closeDlg);
+$('#mask').addEventListener('click', e => { if (e.target === $('#mask')) closeDlg(); });
+
+/* ---------- 模块视图 ---------- */
+$$('#modbar .mod[data-mod]').forEach(m => m.addEventListener('click', () => switchMod(m.dataset.mod)));
+$('#modExit').addEventListener('click', () => toast('网页版无需退出，工程已自动存在本机浏览器'));
+function switchMod(mod) {
+  S.activeMod = mod;
+  $$('#modbar .mod').forEach(x => x.classList.toggle('on', x.dataset.mod === mod));
+  const mv = $('#moduleView');
+  if (mod === 'smt') { mv.classList.remove('open'); return; }
+  mv.classList.add('open');
+  const titles = { bomcad: 'BOM+CAD（导入 / 智能重合 / 合并）', simplify: 'BOM整理（精简规则工作台）', compare: 'BOM比对（通用口径）', customer: '客户与方案', settings: '设置', fixture: '治具生成（波峰焊/过锡炉治具，参数口径 zhiju）', reflow: '回流焊推荐（工艺窗口规则推荐）', annotate: '图片标注（数据集标注与导出）' };
+  $('#mvTitle').textContent = titles[mod] || mod;
+  ({ bomcad: renderBomCadMod, simplify: renderSimplifyMod, compare: renderCompareMod, customer: renderCustomerMod, settings: renderSettingsMod, fixture: renderFixtureMod, reflow: renderReflowMod, annotate: renderAnnotateMod })[mod]($('#mvBody'));
+}
+$('#mvClose').addEventListener('click', () => switchMod('smt'));
+
+function renderBomCadMod(el) {
+  el.innerHTML = `
+  <div class="split"><div>
+    <div class="sec"><h4>CAD 坐标</h4>
+      <div class="btnrow"><button id="mcCad" class="acc">导入CAD</button><button id="mcAlign" class="grn">智能重合</button></div>
+      <div class="note">已导入 ${S.cad.length} 个 CAD 点。当前偏移 X ${S.cadOffset.x} / Y ${S.cadOffset.y}。</div>
+      <div class="kv"><span>微调 X</span><input type="number" step="0.1" id="mcDX" value="${S.cadOffset.x}"><span>微调 Y</span><input type="number" step="0.1" id="mcDY" value="${S.cadOffset.y}"></div>
+      <div class="btnrow"><button id="mcAdj">应用微调</button><button data-rot="0">旋转 0°</button><button data-rot="90">90°</button><button data-rot="180">180°</button><button data-rot="270">270°</button></div>
+      <div class="note" id="mcAlignMsg"></div></div>
+    <div class="sec"><h4>BOM</h4>
+      <div class="btnrow"><button id="mcBom" class="acc">导入BOM（Excel/CSV/粘贴）</button><button id="mcMerge" class="grn">合并BOM向导</button></div>
+      <div class="note">已导入 ${S.bomRows.length} 行 BOM。</div></div>
+  </div><div>
+    <div class="sec"><h4>流水线进度</h4><div class="note" style="line-height:2">
+      1 导入 Gerber（${S.layers.length} 层）→ 2 CAD 重合 → 3 画布提取坐标（${S.coords.length} 个）→ 4 丝印位号补正 → 5 拼板（${S.panels.length} 块）→ 6 BOM 精简/合并 → 7 元件库匹配 → 8 角度/封装检查 → 9 基板/MARK/站位 → 10 输出程序与钢网文件</div></div>
+  </div></div>`;
+  $('#mcCad').addEventListener('click', () => $('#fileCad').click());
+  $('#mcAlign').addEventListener('click', () => doAlign(true));
+  $('#mcAdj').addEventListener('click', () => { S.cadOffset = { x: +$('#mcDX').value || 0, y: +$('#mcDY').value || 0 }; draw(); save(); msg('CAD 偏移已微调'); });
+  el.querySelectorAll('[data-rot]').forEach(b => b.addEventListener('click', () => {
+    const a = +b.dataset.rot * Math.PI / 180, cos = Math.cos(a), sin = Math.sin(a);
+    S.cad = S.cad.map(c => ({ ...c, x: Core.round3(c.x * cos - c.y * sin), y: Core.round3(c.x * sin + c.y * cos), rot: (c.rot + +b.dataset.rot) % 360 }));
+    msg('CAD 已整体旋转 ' + b.dataset.rot + '°'); draw(); save();
+  }));
+  $('#mcBom').addEventListener('click', () => openBomImport(null));
+  $('#mcMerge').addEventListener('click', () => openMergeDlg());
+}
+function doAlign(verbose) {
+  if (!S.cad.length) { toast('先导入 CAD'); return null; }
+  const pads = Core.componentCenters(S.layers.filter(l => l.kind === 'paste').flatMap(l => l.prims));
+  if (!pads.length) { toast('没有焊盘层可对齐'); return null; }
+  const t0 = performance.now();
+  const r = Core.alignCadToPads(S.cad, pads);
+  S.cadOffset = { x: r.dx, y: r.dy };
+  const txt = `智能重合完成：偏移 (${r.dx}, ${r.dy})，配对 ${r.pairs} 点，平均偏差 ${r.avgDev} mm`;
+  msg(txt); if (verbose) { const m = $('#mcAlignMsg'); if (m) m.textContent = txt; }
+  $('#stTime').textContent = '耗时 ' + ((performance.now() - t0) / 1000).toFixed(2) + 's';
+  draw(); save(); return r;
+}
+
+function renderSimplifyMod(el) {
+  const R = S.simplifyRules;
+  el.innerHTML = `
+  <div class="split"><div style="flex:1.6">
+    <div class="btnrow"><button id="msImport" class="acc">导入 BOM</button><button id="msRun" class="grn">重新精简</button><button id="msExport">导出 BOM(CSV)</button></div>
+    <table><thead><tr><th>料号</th><th>原规格</th><th>精简规格（可改）</th><th>位置</th><th>用量</th><th>检查</th></tr></thead><tbody>
+    ${S.bomRows.map((r, i) => `<tr><td>${esc(r.partNo)}</td><td>${esc(r.spec)}</td><td><input data-simp="${i}" value="${esc(r.simpleSpec)}" style="width:190px"></td><td>${esc(r.refs.slice(0, 5).join(','))}${r.refs.length > 5 ? '…' : ''}</td><td>${r.qty ?? ''}</td><td>${r.codeStatus === '编码未登记' ? '<span class="tag r">编码未登记</span>' : esc(r.codeStatus || '')}</td></tr>`).join('') || '<tr><td colspan=6 class="note">暂无 BOM，先导入</td></tr>'}
+    </tbody></table></div>
+  <div>
+    <div class="sec"><h4>精简规则</h4>
+      <div class="kv2"><span>字段顺序</span><input id="msOrder" value="${R.order.join(',')}" title="value,voltage,pkg,material,tol"></div>
+      <div class="kv2"><span>分隔符</span><input id="msSep" value="${esc(R.sep)}" style="width:50px"></div>
+      <div class="note">字段：value 参数 / voltage 电压 / pkg 封装 / material 材料 / tol 误差。示例：CAP2.2uF10V0402X5RT=0.5 → ${esc(Core.simplifySpec('CAP2.2uF10V0402X5RT=0.5', R))}</div>
+      <h4 style="margin-top:8px">自定义替换表（原样=替换，每行一条）</h4>
+      <textarea id="msRepl">${R.repl.map(p => p.join('=')).join('\n')}</textarea>
+      <div class="btnrow"><button id="msRuleSave" class="acc">保存规则并重跑</button></div></div>
+    <div class="sec"><h4>编码库（料号=精简规格，每行一条）</h4>
+      <textarea id="msLib">${Object.entries(S.codeLib).map(([k, v]) => k + '=' + v).join('\n')}</textarea>
+      <div class="btnrow"><button id="msLibSave">保存编码库并复查</button></div>
+      <div class="note">精简后按料号查编码库，未登记标红「编码未登记」。</div></div>
+  </div></div>`;
+  el.querySelectorAll('[data-simp]').forEach(inp => inp.addEventListener('change', () => { S.bomRows[+inp.dataset.simp].simpleSpec = inp.value; Core.checkBomCodes(S.bomRows, S.codeLib); save(); renderSimplifyMod(el); }));
+  const applyRules = () => {
+    R.order = $('#msOrder').value.split(',').map(s => s.trim()).filter(Boolean);
+    R.sep = $('#msSep').value || '-';
+    R.repl = $('#msRepl').value.split('\n').map(l => l.split('=')).filter(p => p.length === 2).map(p => [p[0].trim(), p[1].trim()]);
+    runSimplify(); renderSimplifyMod(el);
+  };
+  $('#msRuleSave').addEventListener('click', applyRules);
+  $('#msRun').addEventListener('click', () => { runSimplify(); renderSimplifyMod(el); });
+  $('#msImport').addEventListener('click', () => openBomImport(null));
+  $('#msExport').addEventListener('click', () => {
+    const txt = '料号,规格,精简规格,位置,用量,名称\n' + S.bomRows.map(r => [r.partNo, r.spec, r.simpleSpec, r.refs.join(' '), r.qty ?? '', r.name].join(',')).join('\n');
+    download('BOM精简.csv', txt, 'text/csv');
+  });
+  $('#msLibSave').addEventListener('click', () => {
+    S.codeLib = {}; $('#msLib').value.split('\n').forEach(l => { const i = l.indexOf('='); if (i > 0) S.codeLib[l.slice(0, i).trim()] = l.slice(i + 1).trim(); });
+    Core.checkBomCodes(S.bomRows, S.codeLib); msg('编码库已保存'); renderSimplifyMod(el);
+  });
+}
+function runSimplify() { for (const r of S.bomRows) r.simpleSpec = Core.simplifySpec(r.spec, S.simplifyRules); Core.checkBomCodes(S.bomRows, S.codeLib); msg('BOM 精简完成 ' + S.bomRows.length + ' 行'); save(); }
+
+function renderCompareMod(el) {
+  const diffs = S.bom2Rows.length ? Core.compareBom(S.bomRows, S.bom2Rows) : [];
+  el.innerHTML = `<div class="sec"><div class="btnrow"><button id="mc2Import" class="acc">导入第二份 BOM</button>
+  <span class="note">按位号与当前工程 BOM 比对（通用口径实现，证据仅有入口）。当前 BOM ${S.bomRows.length} 行，第二份 ${S.bom2Rows.length} 行。</span></div>
+  ${S.bom2Rows.length ? `<table><thead><tr><th>位号</th><th>类型</th><th>详情</th></tr></thead><tbody>${diffs.map(d => `<tr><td>${esc(d.ref)}</td><td><span class="tag ${d.type === '新增' ? 'g' : d.type === '删除' ? 'r' : 'y'}">${d.type}</span></td><td>${esc(d.detail)}</td></tr>`).join('') || '<tr><td colspan=3 class="note">无差异</td></tr>'}</tbody></table>` : '<div class="note">尚未导入第二份 BOM</div>'}</div>`;
+  $('#mc2Import').addEventListener('click', () => openBomImport('compare'));
+}
+
+function renderCustomerMod(el) {
+  const sizes = new Map();
+  for (const c of S.coords) { const db = Core.COMPONENT_DB.find(d => d.id === c.dbId); if (db) sizes.set(db.pkg, db.w + '×' + db.h); }
+  el.innerHTML = `<div class="split"><div>
+    <div class="sec"><h4>客户列表</h4>
+    <div class="btnrow"><input id="cuName" placeholder="客户名称" style="flex:1"><button id="cuAdd" class="acc">新建客户</button></div>
+    <table><thead><tr><th>客户</th><th>元件尺寸记录</th><th></th></tr></thead><tbody>
+    ${S.customers.map((c, i) => `<tr data-cu="${i}" class="${S._cu === i ? 'sel' : ''}"><td>${esc(c.name)}</td><td>${(c.sizes || []).length} 条</td><td><button data-cudel="${i}">删</button></td></tr>`).join('') || '<tr><td colspan=3 class="note">暂无客户</td></tr>'}
+    </tbody></table>
+    <div class="note">客户详情沉淀该客户的元件尺寸记录（当前工程匹配到的封装 W×H）：${[...sizes.entries()].map(([k, v]) => k + ' ' + v).join('、') || '暂无'}</div>
+    <div class="btnrow"><button id="cuSnap">把当前尺寸记录存入选中客户</button></div></div></div>
+  <div>
+    <div class="sec"><h4>方案（挂到客户）</h4>
+    <div class="kv2"><span>方案名</span><input id="plName" placeholder="如 雅马哈标准方案"></div>
+    <div class="kv2"><span>输出品牌</span><select id="plBrand"><option>雅马哈</option><option>松下</option><option>JUKI</option><option>韩华</option><option>富士</option><option>通用CSV</option></select></div>
+    <div class="kv2"><span>精简字段顺序</span><input id="plOrder" value="${S.simplifyRules.order.join(',')}"></div>
+    <div class="btnrow"><button id="plAdd" class="acc">新建方案</button></div>
+    <table><thead><tr><th>方案</th><th>客户</th><th>品牌</th><th></th></tr></thead><tbody>
+    ${S.plans.map((p, i) => `<tr><td>${esc(p.name)}</td><td>${esc((S.customers.find(c => c.id === p.customerId) || {}).name || '-')}</td><td>${esc(p.brand)}</td><td><button data-plrun="${i}" class="grn">按方案重跑</button></td></tr>`).join('') || '<tr><td colspan=4 class="note">暂无方案</td></tr>'}
+    </tbody></table>
+    <div class="note">方案 = 一组处理参数（精简规则/输出品牌）；「按方案重跑」= 按方案的精简顺序重跑精简 + 元件库匹配。</div></div></div></div>`;
+  $('#cuAdd').addEventListener('click', () => { const n = $('#cuName').value.trim(); if (!n) return; S.customers.push({ id: 'C' + Date.now(), name: n, sizes: [] }); refresh(); renderCustomerMod(el); });
+  el.querySelectorAll('[data-cu]').forEach(tr => tr.addEventListener('click', () => { S._cu = +tr.dataset.cu; renderCustomerMod(el); }));
+  el.querySelectorAll('[data-cudel]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.customers.splice(+b.dataset.cudel, 1); save(); renderCustomerMod(el); }));
+  $('#cuSnap').addEventListener('click', () => { const c = S.customers[S._cu]; if (!c) { toast('先点选一个客户'); return; } c.sizes = [...sizes.entries()].map(([k, v]) => k + ' ' + v); msg('已存入 ' + c.sizes.length + ' 条尺寸记录'); save(); renderCustomerMod(el); });
+  $('#plAdd').addEventListener('click', () => {
+    const c = S.customers[S._cu]; if (!c) { toast('先点选一个客户'); return; }
+    S.plans.push({ id: 'P' + Date.now(), name: $('#plName').value.trim() || '未命名方案', customerId: c.id, brand: $('#plBrand').value, order: $('#plOrder').value.split(',').map(s => s.trim()).filter(Boolean) });
+    save(); renderCustomerMod(el);
+  });
+  el.querySelectorAll('[data-plrun]').forEach(b => b.addEventListener('click', () => {
+    const p = S.plans[+b.dataset.plrun]; S.simplifyRules.order = p.order.slice(); runSimplify();
+    const r = Core.autoMatchDb(S.coords); msg(`已按方案「${p.name}」重跑：精简完成，元件匹配成功 ${r.ok}，输出品牌 ${p.brand}`); refresh();
+  }));
+}
+function renderSettingsMod(el) {
+  el.innerHTML = `<div class="sec"><h4>处理参数</h4>
+  <div class="kv2"><span>钢网厚度 mm</span><input type="number" id="msT" step="0.01" value="${S.settings.stencilT}"></div>
+  <div class="kv2"><span>POS 标准球径 mm</span><input type="number" id="msDia" step="0.01" value="${S.settings.posDia}"></div>
+  <div class="btnrow"><button id="msSave" class="acc">保存</button><button id="msNotdo">未做/部分清单</button><button id="msWipe">清空本机工程</button></div>
+  <div class="note">本地单机版：无账号、无云端，数据只存本机浏览器。</div></div>`;
+  $('#msSave').addEventListener('click', () => { S.settings.stencilT = +$('#msT').value || 0.12; S.settings.posDia = +$('#msDia').value || 0.3; save(); msg('参数已保存'); });
+  $('#msNotdo').addEventListener('click', showNotDo);
+  $('#msWipe').addEventListener('click', () => { localStorage.removeItem('xg-smt-proj'); toast('已清空，刷新页面生效'); });
+}
+
+/* ---------- 治具生成模块（参数口径 zhiju；2D 俯视示意，3D 建模未做） ---------- */
+const FIX_FIELDS = [
+  ['pcb.thickness', '板厚 mm'], ['pcb.clearance_per_side', '外形间隙（每边）mm'], ['pcb.clearance_tolerance', '间隙公差 mm'],
+  ['fixture.edge_margin', '治具边距 mm'], ['fixture.total_height', '治具总高 mm'], ['fixture.cavity_depth', '沉腔深度 mm'], ['fixture.support_rim_width', '承托台阶宽 mm'],
+  ['fillet.radius', '安全倒角深度 mm'], ['notch.type', '取板凹口方案'], ['notch.radius', '凹口半径 mm'], ['notch.reach', '凹口 reach mm'], ['notch.length', '凹口长 mm'], ['notch.depth', '凹口深 mm'],
+  ['corner_magnets.diameter', '角磁体直径 mm'], ['corner_magnets.depth', '角磁体深 mm'], ['corner_magnets.inset', '角磁体内缩 mm'],
+  ['side_fix.mode', '对立面固定（magnet/screw）'], ['pins.fit_clearance_per_side', '定位销配合间隙（每边）mm'], ['pins.anti_fool', '定位销防呆（一圆一方）'],
+  ['mounting_holes.min_dia', '安装孔识别最小孔径 mm'], ['mounting_holes.max_dia', '安装孔识别最大孔径 mm'], ['mounting_holes.max_count', '安装孔最多识别数'],
+];
+function fixGet(P, path) { return path.split('.').reduce((o, k) => o?.[k], P); }
+function fixSet(P, path, v) { const ks = path.split('.'); let o = P; ks.slice(0, -1).forEach(k => o = o[k]); o[ks[ks.length - 1]] = v; }
+function renderFixtureMod(el) {
+  if (!S.fixtureParams) S.fixtureParams = JSON.parse(JSON.stringify(Core.FIXTURE_DEFAULTS));
+  const P = S.fixtureParams;
+  el.innerHTML = `
+  <div class="split"><div>
+    <div class="sec"><h4>治具参数（默认值 = zhiju 仓库 config.json 原值）</h4>
+    ${FIX_FIELDS.map(([path, label]) => {
+      const v = fixGet(P, path);
+      return `<div class="kv2"><span>${label}</span>${typeof v === 'boolean' ? `<input type="checkbox" data-fx="${path}" ${v ? 'checked' : ''}>` : `<input data-fx="${path}" value="${esc(v)}" style="width:130px">`}</div>`;
+    }).join('')}
+    <div class="btnrow"><button id="fxDraw" class="acc">按参数重画示意图</button><button id="fxReset">恢复默认参数</button>
+    <button id="fxCsv">导出参数表 CSV</button><button id="fxJson">导出参数 JSON</button></div>
+    <div class="note">参数体系来自开源仓库 StarCompute/zhiju（波峰焊/测试治具生成器，AGPL-3.0）的真实 config.json；本页只复刻参数与 2D 俯视示意，<b>3D 模型（STL/GLB）生成未做</b>，需要 3D 时请部署原仓库服务。</div></div>
+  </div><div style="flex:1.4">
+    <div class="sec"><h4>俯视示意图（点选元件看信息卡）</h4>
+    <canvas id="fxCv" width="560" height="420" style="background:#17181d; border:1px solid var(--line); max-width:100%"></canvas>
+    <div class="note" id="fxInfo">板 ${S.board.w}×${S.board.h}mm · 元件 ${S.coords.length} 个（来自当前工程坐标）。点图上的元件块弹出信息卡。</div></div>
+  </div></div>`;
+  const drawFx = () => {
+    FIX_FIELDS.forEach(([path]) => { const inp = el.querySelector(`[data-fx="${path}"]`); if (!inp) return; const cur = fixGet(P, path); if (typeof cur === 'boolean') fixSet(P, path, inp.checked); else if (typeof cur === 'number') fixSet(P, path, +inp.value || 0); else fixSet(P, path, inp.value); });
+    const cvx = el.querySelector('#fxCv'); if (!cvx) return;
+    const g = cvx.getContext('2d');
+    const L = Core.fixtureLayout(S.board, P);
+    const sc = Math.min((cvx.width - 30) / L.outerW, (cvx.height - 30) / L.outerH);
+    const ox = (cvx.width - L.outerW * sc) / 2, oy = (cvx.height - L.outerH * sc) / 2;
+    const X = x => ox + x * sc, Y = y => oy + (L.outerH - y) * sc;
+    g.clearRect(0, 0, cvx.width, cvx.height);
+    g.strokeStyle = '#8a8b98'; g.lineWidth = 2; g.strokeRect(X(0), Y(L.outerH), L.outerW * sc, L.outerH * sc); // 治具外形
+    g.strokeStyle = '#c9a227'; g.lineWidth = 1; g.strokeRect(X(L.cavityX), Y(L.cavityY + L.cavityH), L.cavityW * sc, L.cavityH * sc); // 沉腔
+    g.strokeStyle = '#39d353'; g.strokeRect(X(L.boardX), Y(L.boardY + S.board.h), S.board.w * sc, S.board.h * sc); // 板外形
+    g.fillStyle = '#58a6ff';
+    for (const mg of L.magnets) { g.beginPath(); g.arc(X(mg.x), Y(mg.y), Math.max(3, mg.d / 2 * sc), 0, 7); g.fill(); } // 角磁体
+    g.strokeStyle = '#ff9f43'; g.beginPath(); g.arc(X(L.outerW / 2), Y(L.outerH), Math.max(4, P.notch.radius * sc), 0, Math.PI); g.stroke(); // 取板凹口（上边中点示意）
+    for (const c of S.coords) {
+      const info = Core.fixtureCompInfo(c); const [w, h] = info.size.split('×').map(parseFloat);
+      g.fillStyle = S._fxSel === c ? '#ff9f43' : '#3a3b46';
+      g.fillRect(X(L.boardX + c.x - w / 2), Y(L.boardY + c.y + h / 2), Math.max(2, w * sc), Math.max(2, h * sc));
+    }
+    cvx._fx = { L, sc, ox, oy };
+  };
+  drawFx();
+  el.querySelector('#fxCv').addEventListener('click', e => {
+    const cvx = e.target, r = cvx.getBoundingClientRect(), f = cvx._fx; if (!f) return;
+    const px = (e.clientX - r.left) * (cvx.width / r.width), py = (e.clientY - r.top) * (cvx.height / r.height);
+    const wx = (px - f.ox) / f.sc - f.L.boardX, wy = f.L.outerH - (py - f.oy) / f.sc - f.L.boardY;
+    let best = null, bd = 1e9;
+    for (const c of S.coords) { const d = Math.hypot(c.x - wx, c.y - wy); if (d < bd) { bd = d; best = c; } }
+    if (!best || bd > 4) { el.querySelector('#fxInfo').textContent = '没点中元件（最近 ' + (best ? bd.toFixed(1) + 'mm' : '—') + '）'; return; }
+    S._fxSel = best;
+    const i = Core.fixtureCompInfo(best);
+    el.querySelector('#fxInfo').innerHTML = `<b style="font-size:15px">${esc(i.ref)}</b> <span class="tag y">${esc(i.type)}</span><br>` +
+      `所在层：${esc(i.layer)}<br>类型：${esc(i.type)}<br>封装：${esc(i.pkg)}<br>尺寸 L×W×H：${esc(i.size)}<br>坐标：${i.x}, ${i.y}<br>旋转：${i.rot}°<br>引脚：${i.pins}`;
+    drawFx();
+  });
+  el.querySelector('#fxDraw').addEventListener('click', () => { drawFx(); save(); msg('治具示意图已按参数重画'); });
+  el.querySelector('#fxReset').addEventListener('click', () => { S.fixtureParams = JSON.parse(JSON.stringify(Core.FIXTURE_DEFAULTS)); renderFixtureMod(el); });
+  el.querySelector('#fxCsv').addEventListener('click', () => {
+    drawFx();
+    download('治具参数.csv', '参数,值\n' + FIX_FIELDS.map(([path, label]) => `${path}（${label}）,${fixGet(P, path)}`).join('\n'), 'text/csv');
+  });
+  el.querySelector('#fxJson').addEventListener('click', () => { drawFx(); download('治具参数.json', JSON.stringify(P, null, 2), 'application/json'); });
+}
+
+/* ---------- 回流焊推荐模块（工艺窗口规则推荐，非 AI 模型） ---------- */
+function renderReflowMod(el) {
+  el.innerHTML = `
+  <div class="split"><div>
+    <div class="sec"><h4>输入</h4>
+    <div class="kv2"><span>锡膏类型</span><select id="rfSolder"><option>SAC305</option><option>SN63PB37</option><option>SN100C</option></select></div>
+    <div class="kv2"><span>板材</span><select id="rfBoard"><option>FR-4</option><option>铝基板</option><option>陶瓷</option><option>柔性板</option></select></div>
+    <div class="kv2"><span>元件类型</span><select id="rfComp"><option>普通</option><option>大热容</option><option>BGA多</option><option>细间距</option></select></div>
+    <div class="btnrow"><button id="rfGo" class="acc">生成推荐</button></div>
+    <div class="note">按开源项目 StarCompute/reflow_ai 的生产工艺窗口（峰值 235–250℃、TAL 45–90s、均热 150–200℃ 等）做硬约束的<b>规则推荐</b>；原仓库的贝叶斯/ML 推荐模型未移植，推荐质量口径不同，请勿当作 AI 预测。另注：该仓库企业/组织商用需另行授权。</div></div>
+    <div id="rfOut"></div>
+  </div><div style="flex:1.4">
+    <div class="sec"><h4>推荐温度曲线</h4><canvas id="rfCv" width="560" height="360" style="background:#17181d; border:1px solid var(--line); max-width:100%"></canvas>
+    <div class="note">横轴时间（s），纵轴温度（℃）。先选输入再点「生成推荐」。</div></div>
+  </div></div>`;
+  el.querySelector('#rfGo').addEventListener('click', () => {
+    const rec = Core.recommendReflow({ solder: el.querySelector('#rfSolder').value, board: el.querySelector('#rfBoard').value, comp: el.querySelector('#rfComp').value });
+    const rows = [['峰值温度 ℃', rec.peak_temp], ['液相线以上时间 TAL s', rec.tal], ['升温斜率 ℃/s', rec.ramp_up], ['降温斜率 ℃/s', rec.ramp_down], ['板面温差 ℃', rec.delta_t], ['均热区温度 ℃', rec.soak_temp], ['183℃ 以上时间 s', rec.time_above_183], ['链速 cm/min', rec.chain_speed]];
+    el.querySelector('#rfOut').innerHTML = `<div class="sec"><h4>推荐参数（${esc(rec.solder)} / ${esc(rec.board)} / ${esc(rec.comp)}</h4>
+    <table><tbody>${rows.map(([k, v]) => `<tr><td>${k}</td><td><b>${v}</b></td></tr>`).join('')}</tbody></table>
+    ${rec.clampNotes.length ? '<div class="note" style="color:#f0b429">' + rec.clampNotes.map(esc).join('<br>') + '</div>' : ''}
+    <h4 style="margin-top:8px">8 温区设定（单区时长按 30cm/区长估算）</h4>
+    <table><thead><tr><th>温区</th><th>温度 ℃</th><th>时长 s</th></tr></thead><tbody>${rec.zones.map(z => `<tr><td>Z${z.zone}</td><td>${z.temp}</td><td>${z.time}</td></tr>`).join('')}</tbody></table>
+    <h4 style="margin-top:8px">缺陷风险提示（标签集：${Core.REFLOW_DEFECTS.join(' / ')}）</h4>
+    ${rec.risks.map(r => `<div class="note"><span class="tag ${r.level === '中' ? 'y' : 'g'}">${esc(r.defect)} · ${esc(r.level)}</span> ${esc(r.note)}</div>`).join('')}</div>`;
+    const cvx = el.querySelector('#rfCv'), g = cvx.getContext('2d');
+    g.clearRect(0, 0, cvx.width, cvx.height);
+    const maxT = Math.max(...rec.curve.map(p => p.t)) * 1.05, maxTemp = 260;
+    const X = t => 34 + t / maxT * (cvx.width - 44), Y = tp => cvx.height - 24 - tp / maxTemp * (cvx.height - 40);
+    g.strokeStyle = '#3a3b46'; g.beginPath(); g.moveTo(34, 8); g.lineTo(34, cvx.height - 24); g.lineTo(cvx.width - 8, cvx.height - 24); g.stroke();
+    g.fillStyle = '#8a8b98'; g.font = '11px sans-serif';
+    [100, 183, 217, 250].forEach(tp => { g.fillText(tp + '℃', 2, Y(tp) + 3); g.strokeStyle = '#26272f'; g.beginPath(); g.moveTo(34, Y(tp)); g.lineTo(cvx.width - 8, Y(tp)); g.stroke(); });
+    g.strokeStyle = '#ff9f43'; g.lineWidth = 2; g.beginPath();
+    rec.curve.forEach((p, i) => { const x = X(p.t), y = Y(p.temp); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+    g.stroke(); g.lineWidth = 1;
+    g.fillStyle = '#e8e8e8'; g.fillText('峰值 ' + rec.peak_temp + '℃ · TAL ' + rec.tal + 's · 链速 ' + rec.chain_speed + 'cm/min', 44, 18);
+    msg('回流焊推荐已生成：峰值 ' + rec.peak_temp + '℃，TAL ' + rec.tal + 's');
+  });
+}
+
+/* ---------- 图片标注模块（YOLO 闭环前半段：标注 + 数据集导出） ---------- */
+function renderAnnotateMod(el) {
+  if (!S.annotations) S.annotations = [];
+  el.innerHTML = `
+  <div class="sec"><div class="note" style="color:#f0b429">训练/检测需外部服务，本页只做标注与数据集导出——本页不会识别元件，不要当检测结果用。标注坐标为原图像素坐标，可导出 JSON 数据集，拿去外部 YOLO 服务/训练流程使用。</div>
+  <div class="btnrow"><button id="anLoad" class="acc">载入板子照片</button>
+  <span class="pill">标注方式</span><button id="anPt" class="tgl on">点选</button><button id="anBox" class="tgl">框选</button>
+  <span class="pill">名称</span><input id="anLabel" placeholder="如 0402电阻 / BGA" style="width:150px">
+  <button id="anExport" class="grn">导出标注 JSON</button><button id="anClear">清空标注</button></div>
+  <input type="file" id="anFile" accept="image/*" style="display:none">
+  <div class="note" id="anMsg">先载入一张照片，再在图上点选/拖框标注。</div></div>
+  <canvas id="anCv" width="900" height="560" style="background:#17181d; border:1px solid var(--line); max-width:100%"></canvas>
+  <div style="max-height:220px; overflow:auto"><table><thead><tr><th>#</th><th>类型</th><th>名称</th><th>X</th><th>Y</th><th>W</th><th>H</th><th></th></tr></thead><tbody id="anList"></tbody></table></div>`;
+  const cvx = el.querySelector('#anCv'), g = cvx.getContext('2d');
+  let img = null, mode = 'point', drag = null;
+  const drawAn = () => {
+    g.clearRect(0, 0, cvx.width, cvx.height);
+    if (img) g.drawImage(img, 0, 0, cvx.width, cvx.height);
+    for (const a of S.annotations) {
+      g.strokeStyle = '#39d353'; g.lineWidth = 2; g.fillStyle = '#39d353'; g.font = '12px sans-serif';
+      if (a.type === 'box') { const x = a.x * cvx.width / img.naturalWidth, y = a.y * cvx.height / img.naturalHeight, w = a.w * cvx.width / img.naturalWidth, h = a.h * cvx.height / img.naturalHeight; g.strokeRect(x, y, w, h); g.fillText(a.label || '(未命名)', x + 2, Math.max(12, y - 3)); }
+      else { const x = a.x * cvx.width / img.naturalWidth, y = a.y * cvx.height / img.naturalHeight; g.beginPath(); g.arc(x, y, 5, 0, 7); g.stroke(); g.fillText(a.label || '(未命名)', x + 8, y + 3); }
+    }
+    if (drag) { g.strokeStyle = '#ff9f43'; g.strokeRect(drag.x0, drag.y0, drag.x1 - drag.x0, drag.y1 - drag.y0); }
+    el.querySelector('#anList').innerHTML = S.annotations.map((a, i) => `<tr><td>${i + 1}</td><td>${a.type === 'box' ? '框选' : '点选'}</td><td>${esc(a.label)}</td><td>${Math.round(a.x)}</td><td>${Math.round(a.y)}</td><td>${Math.round(a.w || 0)}</td><td>${Math.round(a.h || 0)}</td><td><button data-andel="${i}">删</button></td></tr>`).join('') || '<tr><td colspan=8 class="note">暂无标注</td></tr>';
+    el.querySelectorAll('[data-andel]').forEach(b => b.addEventListener('click', () => { S.annotations.splice(+b.dataset.andel, 1); drawAn(); }));
+  };
+  const toImg = (px, py) => { const r = cvx.getBoundingClientRect(); return { x: (px - r.left) * img.naturalWidth / r.width, y: (py - r.top) * img.naturalHeight / r.height, cx: (px - r.left) * cvx.width / r.width, cy: (py - r.top) * cvx.height / r.height }; };
+  el.querySelector('#anLoad').addEventListener('click', () => el.querySelector('#anFile').click());
+  el.querySelector('#anFile').addEventListener('change', e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    img = new Image();
+    img.onload = () => { S._annoImg = { name: f.name, width: img.naturalWidth, height: img.naturalHeight }; el.querySelector('#anMsg').textContent = '已载入 ' + f.name + '（' + img.naturalWidth + '×' + img.naturalHeight + '），在图上' + (mode === 'point' ? '点选' : '拖框') + '标注，名称填在上方输入框。'; drawAn(); };
+    img.src = URL.createObjectURL(f);
+  });
+  el.querySelector('#anPt').addEventListener('click', e => { mode = 'point'; el.querySelector('#anPt').classList.add('on'); el.querySelector('#anBox').classList.remove('on'); });
+  el.querySelector('#anBox').addEventListener('click', e => { mode = 'box'; el.querySelector('#anBox').classList.add('on'); el.querySelector('#anPt').classList.remove('on'); });
+  cvx.addEventListener('mousedown', e => { if (!img) { toast('先载入照片'); return; } const p = toImg(e.clientX, e.clientY); if (mode === 'box') drag = { x0: p.cx, y0: p.cy, x1: p.cx, y1: p.cy, ix: p.x, iy: p.y }; });
+  cvx.addEventListener('mousemove', e => { if (!drag) return; const p = toImg(e.clientX, e.clientY); drag.x1 = p.cx; drag.y1 = p.cy; drawAn(); });
+  cvx.addEventListener('mouseup', e => {
+    if (!img) return; const p = toImg(e.clientX, e.clientY); const label = el.querySelector('#anLabel').value.trim();
+    if (mode === 'point') S.annotations.push({ type: 'point', x: p.x, y: p.y, w: 0, h: 0, label });
+    else if (drag) { S.annotations.push({ type: 'box', x: Math.min(drag.ix, p.x), y: Math.min(drag.iy, p.y), w: Math.abs(p.x - drag.ix), h: Math.abs(p.y - drag.iy), label }); drag = null; }
+    drawAn();
+  });
+  el.querySelector('#anExport').addEventListener('click', () => {
+    if (!S._annoImg) { toast('先载入照片'); return; }
+    download('annotations.json', Core.annotationsToJson(S.annotations, S._annoImg), 'application/json');
+    msg('标注数据集已导出：' + S.annotations.length + ' 条（训练/检测需外部服务）');
+  });
+  el.querySelector('#anClear').addEventListener('click', () => { S.annotations = []; drawAn(); });
+  drawAn();
+}
+
+/* ---------- BOM 导入弹窗（R4） ---------- */
+let bomImportTarget = null; // null=工程BOM | 'compare'=第二份
+function openBomImport(target) { bomImportTarget = target; $('#fileBom').click(); }
+function guessRole(header, ci) {
+  const h = String(header || '').toLowerCase();
+  if (/料号|part|物料编码|编码/.test(h)) return '料号';
+  if (/规格|spec|型号|描述/.test(h)) return '规格';
+  if (/位置|位号|position|ref/.test(h)) return '位置';
+  if (/用量|数量|qty|count/.test(h)) return '用量';
+  if (/名称|name/.test(h)) return '名称';
+  if (/备注|remark|note/.test(h)) return '备注';
+  return ['料号', '规格', '位置', '用量', '名称'][ci] || '无';
+}
+function showBomTableDlg(table) {
+  const ncol = Math.max(...table.map(r => r.length));
+  const roles = Array.from({ length: ncol }, (_, i) => guessRole(table[0]?.[i], i));
+  const body = showDlg('导入 BOM — 指定每列角色', `
+    <div class="note">首行按表头处理。位号列支持「R1,R2」与范围「LED1-LED16」。</div>
+    <div style="overflow:auto; max-height:50vh"><table><thead><tr>
+    ${roles.map((r, i) => `<th><select data-role="${i}">${Core.BOM_ROLES.map(x => `<option ${x === r ? 'selected' : ''}>${x}</option>`).join('')}</select></th>`).join('')}
+    </tr><tr>${table[0].map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${table.slice(1, 13).map(r => `<tr>${Array.from({ length: ncol }, (_, i) => `<td>${esc(r[i] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="note">共 ${table.length - 1} 行数据（预览前 12 行）</div>`,
+    [{ label: '取消' }, { label: '导入', cls: 'acc', fn: () => {
+        const roleMap = roles.map((_, i) => body.querySelector(`[data-role="${i}"]`).value);
+        const rows = Core.bomRowsFromTable(table.slice(1), roleMap);
+        if (bomImportTarget === 'compare') { S.bom2Rows = rows; msg('第二份 BOM 已导入 ' + rows.length + ' 行'); switchMod('compare'); }
+        else { S.bomRows = rows; runSimplify(); msg('BOM 已导入 ' + rows.length + ' 行并完成精简'); if (S.activeMod === 'simplify') renderSimplifyMod($('#mvBody')); }
+        refresh();
+      } }], true);
+}
+
+/* ---------- 合并 BOM 向导（R22） ---------- */
+function openMergeDlg() {
+  if (!S.bomRows.length) { toast('先导入 BOM'); openBomImport(null); return; }
+  const body = showDlg('合并 BOM · T/B', `
+    <div style="line-height:2">步骤：1.导入 BOM ✓（${S.bomRows.length} 行）→ 2.按「料号-规格」合并 CAD 坐标 → 3.保存退出</div>
+    <div class="kv2"><span>范围</span><span><label class="pill"><input type="radio" name="mgSide" value="ALL" checked> 全部面</label>
+    <label class="pill"><input type="radio" name="mgSide" value="T"> 当前面 T</label></span></div>
+    <div class="kv2"><span>选项</span><label class="pill"><input type="checkbox" id="mgKeep"> 只保留成功坐标</label></div>
+    <div id="mgResult"></div>`,
+    [{ label: '取消' }, { label: '执行合并', cls: 'acc', fn: () => false }, { label: '保存退出', cls: 'grn' }], true);
+  body.closest('.dlg').querySelectorAll('.df button')[1].addEventListener('click', () => {
+    const side = body.querySelector('[name=mgSide]:checked').value;
+    const keep = body.querySelector('#mgKeep').checked;
+    const r = Core.mergeBom(S.coords, S.bomRows, { side, keepOnlySuccess: keep });
+    if (keep) { const rest = S.coords.filter(c => side !== 'ALL' && c.side !== side); S.coords = [...r.merged, ...rest]; }
+    body.querySelector('#mgResult').innerHTML = `
+      <div class="stat3"><div>合并成功<b>${r.stats.mergedCount}</b></div><div>BOM 未匹配<b>${r.stats.bomUnmatchedRows} 行</b></div><div>坐标未匹配<b>${r.stats.coordUnmatched}</b></div></div>
+      <div class="note">自动检查：位号重复 ${r.checks.dupRefs.length ? '✗ ' + r.checks.dupRefs.join(',') : '✓ 无'}；
+      用量一致 ${r.checks.qtyMismatch.length ? '✗ ' + r.checks.qtyMismatch.map(q => q.partNo + '(用量' + q.qty + '≠位号' + q.refs + ')').join('；') : '✓ 一致'}</div>
+      ${r.bomUnmatched.length ? '<div class="note">BOM 未匹配行：' + r.bomUnmatched.map(x => esc(x.partNo)).join('、') + '</div>' : ''}
+      ${r.coordUnmatched.length ? '<div class="note">坐标未匹配：' + r.coordUnmatched.slice(0, 20).join('、') + (r.coordUnmatched.length > 20 ? '…' : '') + '</div>' : ''}`;
+    msg(`合并完成：成功 ${r.stats.mergedCount}，BOM未匹配 ${r.stats.bomUnmatchedRows} 行，坐标未匹配 ${r.stats.coordUnmatched}`);
+    refresh();
+  });
+}
+
+/* ---------- 丝印位号补正（R15） ---------- */
+const silk = { items: [], idx: 0, undo: [] };
+function silkLabelPos(ref) {
+  for (const l of S.layers) { if (l.kind !== 'silk') continue; const t = l.prims.find(p => p.k === 't' && p.text === ref); if (t) return { x: t.x, y: t.y }; }
+  const cad = S.cad.find(c => c.ref === ref); if (cad) return { x: cad.x + S.cadOffset.x, y: cad.y + S.cadOffset.y };
+  return null;
+}
+function buildSilkItems() {
+  const refs = new Set();
+  S.cad.forEach(c => refs.add(c.ref));
+  S.bomRows.forEach(r => r.refs.forEach(x => refs.add(x)));
+  S.layers.filter(l => l.kind === 'silk').forEach(l => l.prims.forEach(p => { if (p.k === 't') refs.add(p.text); }));
+  silk.items = [...refs].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).map(ref => {
+    const coord = S.coords.find(c => c.ref === ref);
+    return { ref, coord: coord || null, pos: silkLabelPos(ref) };
+  });
+}
+function silkState(it) { return it.coord ? (it.coord.silkOk ? '已确认' : '待核对') : '未识别'; }
+function openSilkDlg(focusCoord) {
+  buildSilkItems();
+  if (!silk.items.length) { toast('没有位号来源：先导入 CAD/BOM 或载入带丝印位号的工程'); return; }
+  if (focusCoord) { const i = silk.items.findIndex(it => it.ref === focusCoord.ref); if (i >= 0) silk.idx = i; }
+  window.__silkOpen = true;
+  const body = showDlg('丝印位号补正（识别引擎为工作流占位，无图像 OCR）', '<div id="silkBody"></div>',
+    [{ label: '关闭' }], true);
+  renderSilk(body.querySelector('#silkBody'));
+}
+function renderSilk(el) {
+  if (!el) el = $('#silkBody'); if (!el) return;
+  const it = silk.items[silk.idx]; if (!it) { el.innerHTML = '<div class="note">无条目</div>'; return; }
+  const cnt = { '已确认': 0, '待核对': 0, '未识别': 0 };
+  silk.items.forEach(x => cnt[silkState(x)]++);
+  const near = it.pos ? S.coords.map(c => ({ c, d: Math.hypot(c.x - it.pos.x, c.y - it.pos.y) })).sort((a, b) => a.d - b.d).slice(0, 5) : [];
+  el.innerHTML = `
+  <div class="stat3"><div>已确认<b>${cnt['已确认']}</b></div><div>待核对<b>${cnt['待核对']}</b></div><div>未识别<b>${cnt['未识别']}</b></div>
+  <div>进度<b>${silk.idx + 1} / ${silk.items.length}</b></div></div>
+  <div class="kv2"><span>识别引擎</span><span><select id="skEngine"><option>普通丝印识别</option><option>填充丝印识别</option><option>快速 OCR</option></select>
+  <button id="skRun" class="acc">开始识别</button></span></div>
+  <div class="note">识别引擎为工作流占位（原产品补正窗有普通/填充/快速 OCR 三个引擎选项）：本软件实际执行的是「位号（CAD/BOM/丝印文字层）↔ 坐标」匹配与写入，没有图像 OCR 引擎，切换引擎不改变匹配口径。</div>
+  <div class="kv2"><span>当前位号</span><span style="font-size:18px"><b>${esc(it.ref)}</b> <span class="tag ${silkState(it) === '已确认' ? 'g' : silkState(it) === '待核对' ? 'y' : 'r'}">${silkState(it)}</span></span></div>
+  <div class="kv2"><span>手工输入</span><span><input id="skManual" placeholder="输入位号后回车写入并跳下一条" style="width:280px"> <span class="note">回车=写入并下一条 · Ctrl+Z=撤销</span></span></div>
+  <div class="sec"><h4>候选坐标（按距离）— 点选写入</h4>
+  ${near.map(({ c, d }) => `<button data-cand="${esc(c.ref)}" style="margin:2px">${esc(c.ref)} (${c.x}, ${c.y} · ${d.toFixed(1)}mm)</button>`).join('') || '<span class="note">附近没有坐标</span>'}</div>
+  <div class="btnrow"><button id="skPrev">上一条 F11</button><button id="skNext">下一条 F12</button>
+  <button id="skWrite" class="acc">确认写入</button><button id="skUndo">撤销 Ctrl+Z</button>
+  <span class="pill">角度</span>${[0, 90, 180, 270].map(a => `<button data-ang="${a}">${a}°</button>`).join('')}</div>
+  <div style="max-height:180px; overflow:auto"><table><thead><tr><th>#</th><th>位号</th><th>状态</th></tr></thead><tbody>
+  ${silk.items.map((x, i) => `<tr data-row="${i}" class="${i === silk.idx ? 'sel' : ''}"><td>${i + 1}</td><td>${esc(x.ref)}</td><td>${silkState(x)}</td></tr>`).join('')}
+  </tbody></table></div>`;
+  el.querySelectorAll('[data-row]').forEach(tr => tr.addEventListener('click', () => { silk.idx = +tr.dataset.row; renderSilk(el); }));
+  el.querySelectorAll('[data-cand]').forEach(b => b.addEventListener('click', () => { const c = S.coords.find(x => x.ref === b.dataset.cand); if (c) silkAssign(it, c, el); }));
+  el.querySelectorAll('[data-ang]').forEach(b => b.addEventListener('click', () => { if (it.coord) { it.coord.rot = +b.dataset.ang; refresh(); } }));
+  $('#skRun').addEventListener('click', () => runSilkRecognize(el));
+  $('#skPrev').addEventListener('click', () => { silk.idx = Math.max(0, silk.idx - 1); renderSilk(el); });
+  $('#skNext').addEventListener('click', () => { silk.idx = Math.min(silk.items.length - 1, silk.idx + 1); renderSilk(el); });
+  $('#skWrite').addEventListener('click', () => silkConfirm(it, el));
+  $('#skUndo').addEventListener('click', () => { silkUndo(); renderSilk(el); });
+  $('#skManual').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const v = e.target.value.trim(); if (!v) return;
+    it.ref = v; silkConfirm(it, el, true);
+  });
+}
+function silkAssign(it, coord, el) {
+  silk.undo.push({ coord, prevRef: coord.ref, prevOk: coord.silkOk });
+  coord.ref = it.ref; coord.silkOk = true; it.coord = coord;
+  msg('已写入位号 ' + it.ref); refresh(); renderSilk(el);
+}
+function silkConfirm(it, el, advance) {
+  if (it.coord) { silk.undo.push({ coord: it.coord, prevRef: it.coord.ref, prevOk: it.coord.silkOk }); it.coord.silkOk = true; }
+  else {
+    const free = it.pos ? S.coords.filter(c => /^A_|^P_/.test(c.ref)).sort((a, b) => Math.hypot(a.x - it.pos.x, a.y - it.pos.y) - Math.hypot(b.x - it.pos.x, b.y - it.pos.y))[0] : null;
+    if (free && it.pos && Math.hypot(free.x - it.pos.x, free.y - it.pos.y) <= 12) silkAssign(it, free, el);
+    else if (it.pos) { const c = { ref: it.ref, x: it.pos.x, y: it.pos.y, rot: 0, side: 'T', partNo: '', spec: '', pkg: '', silkOk: true }; S.coords.push(c); it.coord = c; silk.undo.push({ coord: c, prevRef: null, prevOk: false }); }
+    else { toast('该位号没有位置来源，无法写入'); return; }
+  }
+  msg('已确认 ' + it.ref); refresh();
+  if (advance !== false) silk.idx = Math.min(silk.items.length - 1, silk.idx + 1);
+  renderSilk(el);
+}
+function silkUndo() {
+  const u = silk.undo.pop(); if (!u) { toast('没有可撤销的写入'); return; }
+  if (u.prevRef === null) S.coords = S.coords.filter(c => c !== u.coord);
+  else { u.coord.ref = u.prevRef; u.coord.silkOk = u.prevOk; }
+  buildSilkItems(); msg('已撤销上一次位号写入'); refresh();
+}
+/* 丝印识别执行 + 进度窗（xiaocai_gaps.md 缺口 7 实证样式：画布中央深色模态窗——
+   「丝印 N 组，匹配中 x/N（含已有坐标），写入 y/N」+ 已用时间 + 进度条 % + 「取消坐标提取」按钮，取消真能中断） */
+function runSilkRecognize(el) {
+  const total = silk.items.length;
+  if (!total) { toast('没有可识别的位号组'); return; }
+  let prog = document.getElementById('silkProg');
+  if (prog) prog.remove();
+  prog = document.createElement('div'); prog.id = 'silkProg';
+  prog.innerHTML = `<div class="sp-box">
+    <div id="spLine1" style="font-size:14px">丝印 ${total} 组，匹配中 0/${total}（含已有坐标），写入 0/${total}</div>
+    <div id="spTime" style="margin-top:6px; color:var(--mut)">已用时间：0:00:00</div>
+    <div class="sp-bar"><div class="sp-fill" id="spFill"></div></div>
+    <div style="text-align:right" id="spPct">0%</div>
+    <div class="btnrow" style="margin-top:8px"><button id="spCancel">取消坐标提取</button><button id="spClose" class="acc" style="display:none">完成</button></div></div>`;
+  document.body.appendChild(prog);
+  const t0 = Date.now();
+  let i = 0, matched = 0, written = 0, cancelled = false;
+  const fmtT = ms => { const s = Math.floor(ms / 1000); return '0:' + String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+  prog.querySelector('#spCancel').addEventListener('click', () => { cancelled = true; });
+  prog.querySelector('#spClose').addEventListener('click', () => { prog.remove(); renderSilk(el); });
+  const step = () => {
+    const chunk = Math.max(1, Math.round(total / 40));
+    for (let n = 0; n < chunk && i < total; n++, i++) {
+      const it = silk.items[i];
+      if (it.coord) { matched++; continue; }
+      if (!it.pos) continue;
+      const free = S.coords.filter(c => /^A_|^P_/.test(c.ref)).sort((a, b) => Math.hypot(a.x - it.pos.x, a.y - it.pos.y) - Math.hypot(b.x - it.pos.x, b.y - it.pos.y))[0];
+      if (free && Math.hypot(free.x - it.pos.x, free.y - it.pos.y) <= 12) {
+        silk.undo.push({ coord: free, prevRef: free.ref, prevOk: free.silkOk });
+        free.ref = it.ref; free.silkOk = true; it.coord = free; matched++; written++;
+      } else {
+        const c = { ref: it.ref, x: it.pos.x, y: it.pos.y, rot: 0, side: 'T', partNo: '', spec: '', pkg: '', silkOk: true };
+        S.coords.push(c); it.coord = c; silk.undo.push({ coord: c, prevRef: null, prevOk: false }); matched++; written++;
+      }
+    }
+    const pct = Math.round(i / total * 100);
+    prog.querySelector('#spLine1').textContent = `丝印 ${total} 组，匹配中 ${matched}/${total}（含已有坐标），写入 ${written}/${total}`;
+    prog.querySelector('#spTime').textContent = '已用时间：' + fmtT(Date.now() - t0);
+    prog.querySelector('#spFill').style.width = pct + '%';
+    prog.querySelector('#spPct').textContent = pct + '%';
+    if (cancelled || i >= total) {
+      prog.querySelector('#spCancel').style.display = 'none';
+      const closeBtn = prog.querySelector('#spClose');
+      closeBtn.style.display = ''; closeBtn.textContent = cancelled ? '已取消（关闭）' : '完成';
+      prog.querySelector('#spLine1').textContent += cancelled ? '（已取消）' : '（完成）';
+      refresh();
+      msg(`丝印识别${cancelled ? '已取消' : '完成'}：共 ${total} 组，匹配 ${matched}，写入 ${written}`);
+      return;
+    }
+    setTimeout(step, 60);
+  };
+  step();
+}
+
+/* ---------- 钢网：开口缩放（R38）/ IPC 判定（R39）/ 导出 ---------- */
+function openApertureDlg() {
+  const pastes = S.layers.filter(l => l.kind === 'paste');
+  if (!pastes.length) { toast('先导入锡膏层（.gtp）'); return; }
+  const body = showDlg('钢网开口编辑 — 按比例缩放开口', `
+    <div class="kv2"><span>锡膏层</span><select id="apLayer">${pastes.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('')}</select></div>
+    <div class="kv2"><span>范围</span><select id="apScope"><option value="all">全部开口</option><option value="sel">仅选中图元</option></select></div>
+    <div class="kv2"><span>缩放 %</span><input type="number" id="apScale" value="90"></div>
+    <div class="note">生成一个「处理后」新层（原层保留），改前改后尺寸可在画布切换图层对比；随后用 IPC 判定校验面积比。</div>`,
+    [{ label: '取消' }, { label: '生成处理后层', cls: 'acc', fn: () => {
+      const l = layerById(body.querySelector('#apLayer').value); const f = (+body.querySelector('#apScale').value || 100) / 100;
+      const selKeys = new Set(S.sel);
+      const prims = l.prims.map((p, i) => {
+        const q = JSON.parse(JSON.stringify(p));
+        if (q.k === 'f' && (body.querySelector('#apScope').value === 'all' || selKeys.has(l.id + ':' + i))) { q.w = Core.round3(q.w * f); q.h = Core.round3(q.h * f); }
+        return q;
+      });
+      const nl = { id: newLayerId(), name: l.name + '-处理后', fileName: l.fileName, kind: 'paste', side: l.side, visible: true, color: '#ff9f43', prims };
+      S.layers.push(nl); S.procLayerId = nl.id; msg('已生成处理后锡膏层（缩放 ' + (f * 100) + '%）'); refresh();
+    } }]);
+}
+function openIpcDlg() {
+  const pastes = S.layers.filter(l => l.kind === 'paste');
+  if (pastes.length < 2) { toast('需要原始锡膏层 + 处理后层：先用「钢网开口编辑」生成处理后层'); return; }
+  const body = showDlg('锡膏层对比 · IPC 合规判定（IPC-7525B 口径）', `
+    <div class="kv"><span>原始层</span><select id="ipcA">${pastes.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('')}</select>
+    <span>处理后层</span><select id="ipcB">${pastes.map(l => `<option value="${l.id}" ${l.id === S.procLayerId ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>
+    <div class="kv2"><span>钢网厚度 mm</span><input type="number" id="ipcT" step="0.01" value="${S.settings.stencilT}"></div>
+    <div class="note">面积比 AR = (L×W) / (2(L+W)×板厚)：≥0.66 合格，0.62–0.66 临界，&lt;0.62 问题。</div>
+    <div id="ipcOut"></div>`,
+    [{ label: '关闭' }, { label: '导出 HTML 报告', fn: () => false }, { label: '对齐并对比', cls: 'acc', fn: () => false }], true);
+  const btns = body.closest('.dlg').querySelectorAll('.df button');
+  const run = () => {
+    const a = layerById(body.querySelector('#ipcA').value), b = layerById(body.querySelector('#ipcB').value);
+    const rows = Core.ipcCompare(a.prims, b.prims, +body.querySelector('#ipcT').value || 0.12);
+    body._ipcRows = rows;
+    const cnt = { '合格': 0, '临界': 0, '问题': 0 }; rows.forEach(r => cnt[r.verdict]++);
+    body.querySelector('#ipcOut').innerHTML = `
+      <div class="stat3"><div>合格<b>${cnt['合格']}</b></div><div>临界<b>${cnt['临界']}</b></div><div>问题<b>${cnt['问题']}</b></div></div>
+      <div style="max-height:300px; overflow:auto"><table><thead><tr><th>器件</th><th>中心偏差</th><th>原 W×H</th><th>处理后 W×H</th><th>面积</th><th>AR</th><th>判定</th></tr></thead><tbody>
+      ${rows.map(r => `<tr class="${r.verdict === '问题' ? 'bad' : ''}"><td>${esc(r.name)}</td><td>${r.dev ?? '—'}</td><td>${r.ow}×${r.oh}</td><td>${r.pw}×${r.ph}</td><td>${r.area}</td><td>${r.ar}</td><td><span class="tag ${r.verdict === '合格' ? 'g' : r.verdict === '临界' ? 'y' : 'r'}">${r.verdict}</span> ${esc(r.why)}</td></tr>`).join('')}
+      </tbody></table></div>`;
+    msg(`IPC 判定完成：合格 ${cnt['合格']} / 临界 ${cnt['临界']} / 问题 ${cnt['问题']}`);
+  };
+  btns[2].addEventListener('click', run);
+  btns[1].addEventListener('click', () => {
+    if (!body._ipcRows) { toast('先点「对齐并对比」'); return; }
+    const rows = body._ipcRows;
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>IPC 合规判定报告</title><style>body{font-family:sans-serif}table{border-collapse:collapse}td,th{border:1px solid #999;padding:3px 8px}.bad{color:#c00}</style></head><body>' +
+      '<h2>锡膏层对比 · IPC 合规判定报告</h2><p>标准口径 IPC-7525B / IPC-7093 · 面积比 AR=(L×W)/(2(L+W)×板厚) · AR&lt;0.66 判问题（0.62–0.66 临界）</p>' +
+      '<table><tr><th>器件</th><th>中心偏差mm</th><th>原开口</th><th>处理后开口</th><th>面积mm²</th><th>AR</th><th>判定</th></tr>' +
+      rows.map(r => `<tr class="${r.verdict === '问题' ? 'bad' : ''}"><td>${esc(r.name)}</td><td>${r.dev ?? '—'}</td><td>${r.ow}×${r.oh}</td><td>${r.pw}×${r.ph}</td><td>${r.area}</td><td>${r.ar}</td><td>${r.verdict}（${esc(r.why)}）</td></tr>`).join('') +
+      '</table></body></html>';
+    download('IPC判定报告.html', html, 'text/html');
+  });
+  run();
+}
+
+/* ---------- 钢网产物套件导出（.gxo/.gxp/.gxs + 红胶 .glu/.glub） ---------- */
+function openStencilSuiteDlg() {
+  if (!S.layers.length) { toast('先导入图层'); return; }
+  const body = showDlg('钢网产物套件导出（SEAN com_ 套件口径）', `
+    <div class="note">整套产物打包为 ZIP：丝印层 → com_*.gxo、钢网（锡膏）层 → com_*.gxp、阻焊层 → com_*.gxs；铜层/钻孔等保持原扩展名。</div>
+    <div class="kv2"><span>红胶派生</span><span><label class="pill"><input type="checkbox" id="ssGlue" ${S.settings.glue ? 'checked' : ''}> 由锡膏层派生红胶层（顶层 .glu / 底层 .glub）</label></span></div>
+    <div class="kv2"><span>胶点直径 mm</span><input type="number" id="ssDia" step="0.1" value="${S.settings.glueDia || 1.0}"></div>
+    <div class="note">红胶派生口径：按元件名分组取焊盘中心生成胶点（原产品证据只有「勾选 + 派生子集」这一层，点胶细则无公开证据）；派生口径会写进红胶文件的 G04 文件头。</div>
+    <div id="ssList"></div>`,
+    [{ label: '取消' }, { label: '导出套件 ZIP', cls: 'acc', fn: () => {
+      const glue = body.querySelector('#ssGlue').checked, dia = +body.querySelector('#ssDia').value || 1.0;
+      const r = Core.stencilSuiteFiles(S.layers, { glue, dia });
+      download('stencil_suite.zip', Core.zipStore(r.files.map(f => ({ name: f.name, data: f.data }))), 'application/zip');
+      msg('钢网产物套件已导出：' + r.files.length + ' 个文件' + (r.notes.length ? '（' + r.notes.join('；') + '）' : ''));
+    } }]);
+  const renderList = () => {
+    const glue = body.querySelector('#ssGlue').checked, dia = +body.querySelector('#ssDia').value || 1.0;
+    const r = Core.stencilSuiteFiles(S.layers, { glue, dia });
+    body.querySelector('#ssList').innerHTML = '<table><thead><tr><th>产物文件</th><th>大小</th></tr></thead><tbody>' +
+      r.files.map(f => `<tr><td>${esc(f.name)}</td><td>${f.data.length} B</td></tr>`).join('') + '</tbody></table>' +
+      (r.notes.length ? '<div class="note">' + r.notes.map(esc).join('<br>') + '</div>' : '');
+  };
+  body.querySelector('#ssGlue').addEventListener('change', renderList);
+  body.querySelector('#ssDia').addEventListener('change', renderList);
+  renderList();
+}
+
+/* ---------- POS 输出（R35） ---------- */
+function openPosDlg() {
+  const balls = S.ballCoords.length ? S.ballCoords : S.coords.filter(c => c.ball);
+  if (!balls.length) { toast('先框选 BGA 焊盘并点「倒装BGA提取」'); return; }
+  const body = showDlg('倒装 BGA — 雅马哈 POS 输出', `
+    <div class="kv2"><span>球位数</span><b>${balls.length}</b></div>
+    <div class="kv2"><span>标准球径 mm</span><input type="number" id="posDia" step="0.01" value="${S.settings.posDia}"></div>
+    <div class="kv2"><span>镜像</span><span><label class="pill"><input type="checkbox" id="posMX" ${S.settings.posMirrorX ? 'checked' : ''}> 镜像 X</label>
+    <label class="pill"><input type="checkbox" id="posMY" ${S.settings.posMirrorY ? 'checked' : ''}> 镜像 Y</label></span></div>
+    <div class="note">自明示版式（POS 无公开标准）：文件头注释写清每列含义，正文每球一行——球位编号、相对球阵整体中心的 X、Y、球径（Tab 分隔）。</div>
+    <div style="max-height:220px; overflow:auto"><table><thead><tr><th>位号</th><th>X</th><th>Y</th></tr></thead><tbody>
+    ${balls.slice(0, 24).map(b => `<tr><td>${esc(b.ref)}</td><td>${b.x}</td><td>${b.y}</td></tr>`).join('')}</tbody></table></div>`,
+    [{ label: '取消' }, { label: '导出 POS', cls: 'acc', fn: () => {
+      const r = Core.genPOS(balls, { dia: +body.querySelector('#posDia').value || 0.3, mirrorX: body.querySelector('#posMX').checked, mirrorY: body.querySelector('#posMY').checked });
+      download('bga.pos', r.text); msg('POS 已导出：' + r.count + ' 个球位');
+    } }]);
+}
+
+/* ---------- 焊盘模板库（R16） ---------- */
+function saveTemplate() {
+  const sel = selectedPrims().filter(p => p.prim.k === 'f');
+  if (!sel.length) { toast('先在画布选中一组焊盘'); return; }
+  const c0 = Core.primCenter(sel[0].prim);
+  const tpl = { group: '默认', name: '模板' + (S.templates.length + 1), pads: sel.map(p => { const c = Core.primCenter(p.prim); return { dx: Core.round3(c.x - c0.x), dy: Core.round3(c.y - c0.y), shape: p.prim.shape, w: p.prim.w, h: p.prim.h }; }), pins: sel.length, refAngle: 0 };
+  S.templates.push(tpl); msg('已保存焊盘模板 ' + tpl.name + '（' + tpl.pins + ' 焊盘）'); save();
+}
+function findByTemplate() {
+  const tpl = S.templates[S.templates.length - 1];
+  if (!tpl) { toast('先存一个焊盘模板'); return; }
+  const l = S.layers.find(x => x.kind === 'paste') || activeLayer(); if (!l) return;
+  S.sel.clear();
+  let n = 0;
+  l.prims.forEach((p, i) => { if (p.k === 'f' && p.shape === tpl.pads[0].shape && Math.abs(p.w - tpl.pads[0].w) < 0.02 && Math.abs(p.h - tpl.pads[0].h) < 0.02) { S.sel.add(l.id + ':' + i); n++; } });
+  msg('按模板「' + tpl.name + '」首焊盘形状找到 ' + n + ' 处（已选中）'); refresh();
+}
+
+/* ---------- 输出动作（R34/R36/R37/R40） ---------- */
+function expandedCoords() { return S.panels.length > 1 ? Core.expandPanels(S.coords, S.panels, S.board, {}) : S.coords; }
+function brandProgram(brand) {
+  const coords = expandedCoords();
+  const head = {
+    '松下': '; MJ SMT 松下文本程序（模板）\n', 'JUKI': '; MJ SMT JUKI 文本程序（模板）\n',
+    '韩华': '; MJ SMT 韩华文本程序（模板）\n', '富士': '; MJ SMT 富士文本程序（模板）\n',
+  }[brand] || '';
+  download('program_' + brand + '.txt', head + Core.coordsToText(coords, 'csv'));
+  msg('已输出 ' + brand + ' 文本程序：' + coords.length + ' 个坐标');
+}
+const OUTPUTS = [
+  { label: '雅马哈 POS（倒装BGA）', fn: openPosDlg },
+  { label: '雅马哈（P-Tool）ASCII 贴装数据', fn: () => { const r = Core.genYamahaAscii(expandedCoords(), { proj: S.name }); download('yamaha_ptool_ascii.txt', r.text); msg('雅马哈 ASCII 贴装数据已导出：' + r.count + ' 个坐标（在 P-Tool 里用「ASCII 数据转换」导入生成 .ygx，本软件不出原生 ygx）'); } },
+  { label: '雅马哈 P-Tool 转换定义说明', fn: () => { download('ptool_转换定义说明.txt', Core.genPToolConvDef()); msg('转换定义说明已导出：在 P-Tool 里照此建一次列映射定义即可复用'); } },
+  { label: '松下文本程序', fn: () => brandProgram('松下') },
+  { label: 'JUKI 文本程序', fn: () => brandProgram('JUKI') },
+  { label: '韩华文本程序', fn: () => brandProgram('韩华') },
+  { label: '富士文本程序', fn: () => brandProgram('富士') },
+  { label: '通用 CSV 程序', fn: () => { download('program.csv', Core.coordsToText(expandedCoords(), 'csv'), 'text/csv'); } },
+  { label: '贴片坐标 TXT（单板）', fn: () => download('coords.txt', Core.coordsToText(S.coords, 'txt')) },
+  { label: '贴片坐标 TXT（含拼板展开）', fn: () => download('coords_panel.txt', Core.coordsToText(expandedCoords(), 'txt')) },
+  { label: '钢网 Gerber（锡膏层）', fn: () => { const l = S.layers.find(x => x.id === S.procLayerId) || S.layers.find(x => x.kind === 'paste'); if (!l) { toast('没有锡膏层'); return; } download('stencil.gtp', Core.writeGerber(l.prims, l.name)); msg('钢网 Gerber 已导出'); } },
+  { label: '钢网产物套件（.gxo/.gxp/.gxs+红胶）', fn: openStencilSuiteDlg },
+  { label: '位号坐标导出（三档匹配统计）', fn: () => {
+      const labels = []; S.layers.filter(l => l.kind === 'silk').forEach(l => l.prims.forEach(p => { if (p.k === 't') labels.push({ ref: p.text, x: p.x, y: p.y }); }));
+      if (!labels.length) { toast('丝印层没有位号文字'); return; }
+      const r = Core.matchRefTiers(labels, S.coords);
+      download('位号坐标.csv', '位号,X,Y,匹配档位,距离,匹配坐标\n' + r.detail.map(d => [d.ref, d.x, d.y, d.tier, d.dist, d.matchedRef].join(',')).join('\n'), 'text/csv');
+      msg(`位号匹配：严格 ${r.strict} / 标准 ${r.standard} / 宽松 ${r.loose} / 未匹配 ${r.unmatched}`);
+    } },
+];
+
+/* ---------- 菜单 ---------- */
+const MENUS = {
+  file: [
+    { label: '新建工程', fn: () => { if (confirm('新建工程？当前工程已自动保存于本机')) applyProject({ name: '未命名工程', layers: [], coords: [] }); } },
+    { label: '打开工程 JSON', fn: () => $('#fileProj').click() },
+    { label: '导出工程 JSON', fn: () => download(S.name + '.json', Core.serializeProject(projectObj()), 'application/json') },
+    { label: '-' },
+    { label: '导入 Gerber', fn: () => $('#fileGerber').click() },
+    { label: '导入 ZIP 整包', fn: () => $('#fileZip').click() },
+    { label: '处理明细（8 步流程）', fn: openProcessDetailDlg },
+    { label: '导入 CAD', fn: () => $('#fileCad').click() },
+    { label: '导入 BOM', fn: () => openBomImport(null) },
+    { label: '导入 PcbDoc（实验性）', fn: () => $('#filePcb').click() },
+    { label: '-' },
+    { label: '载入样例工程', fn: loadSample },
+  ],
+  view: [
+    { label: '适应窗口', fn: () => { fitView(); draw(); } },
+    { label: '放大', fn: () => { S.view.scale *= 1.25; draw(); } },
+    { label: '缩小', fn: () => { S.view.scale /= 1.25; draw(); } },
+    { label: '-' },
+    { label: '图层面板 开/关', fn: () => { const p = $('#layerpanel'); p.style.display = p.style.display === 'none' ? '' : 'none'; resizeCanvas(); } },
+    { label: '拼板展开预览 开/关', fn: () => { S.panelPreview = !S.panelPreview; draw(); } },
+  ],
+  coord: [
+    { label: '坐标检查（重复/重叠）', fn: coordCheck },
+    { label: '查找相同', key: 'F10', fn: findSameAction },
+    { label: '提取倒装BGA球位', fn: doBgaExtract },
+    { label: '撤销上次自动提取', fn: () => $('#ptUndo')?.click() },
+    { label: '-' },
+    { label: '所选坐标角度 +90°', key: 'F1', fn: () => rotSel(90) },
+    { label: '所选坐标角度 +45°', key: 'F2', fn: () => rotSel(45) },
+    { label: '所选坐标角度 +10°', key: 'F3', fn: () => rotSel(10) },
+    { label: '相同料号全体 +90°', fn: () => { if (!S.selCoord) { toast('先选一个坐标'); return; } S.coords.forEach(c => { if (c.partNo && c.partNo === S.selCoord.partNo) c.rot = (c.rot + 90) % 360; }); refresh(); } },
+    { label: '料号与规格交换', fn: () => { S.coords.forEach(c => { const t = c.partNo; c.partNo = c.spec; c.spec = t; }); msg('已交换全部坐标的料号与规格'); refresh(); } },
+    { label: '-' },
+    { label: '方向校正', fn: doAngleCorrect },
+    { label: '自动调整坐标与方向', fn: doAngleCorrect },
+    { label: '封装检查', fn: openPkgCheck },
+  ],
+  db: [
+    { label: '元件数据库', fn: () => showDlg('内置元件数据库（标准封装库）', '<table><thead><tr><th>编号</th><th>封装</th><th>W</th><th>H</th><th>角度基准</th><th>飞达</th></tr></thead><tbody>' + Core.COMPONENT_DB.map(d => `<tr><td>${d.id}</td><td>${d.pkg}</td><td>${d.w}</td><td>${d.h}</td><td>${d.baseAngle}°</td><td>${d.feeder}</td></tr>`).join('') + '</tbody></table>', [{ label: '关闭' }], true) },
+    { label: '编码库', fn: () => switchMod('simplify') },
+    { label: '焊盘模板库', fn: () => showDlg('焊盘模板库', S.templates.length ? '<table><thead><tr><th>分组</th><th>模板名</th><th>焊盘数</th><th>引脚数</th><th>参考方向</th></tr></thead><tbody>' + S.templates.map(t => `<tr><td>${esc(t.group)}</td><td>${esc(t.name)}</td><td>${t.pads.length}</td><td>${t.pins}</td><td>${t.refAngle}°</td></tr>`).join('') + '</tbody></table>' : '<div class="note">暂无模板。在元件数据页「存为焊盘模板」可把画布选中焊盘组存入。</div>', [{ label: '关闭' }]) },
+    { label: '-' },
+    { label: '自动匹配元件库', fn: () => { const r = Core.autoMatchDb(S.coords); msg(`匹配完成：成功 ${r.ok}，未匹配 ${r.fail}`); refresh(); } },
+  ],
+  help: [
+    { label: '操作流程（12 步）', fn: () => showDlg('流水线 12 步', '<div style="line-height:2">导入 Gerber → 自动分层 →（可选）导入 CAD 智能重合 → 画布提取坐标 → 丝印位号补正 → 拼板 → 导入 BOM 并精简 → 合并 BOM → 元件库匹配 → 方向/角度/坐标/封装检查 → 基板/MARK/坏板/站位表 → 输出（贴片程序 + 钢网文件 + 报告）</div>', [{ label: '知道了' }]) },
+    { label: '未做/部分清单', fn: showNotDo },
+    { label: '关于', fn: () => showDlg('关于', '<div style="line-height:2">MJ SMT 编程工作台（合并版）<br>Gerber 进 → 贴片程序与钢网文件出，钢网处理挂同一工程同一画布。<br>单文件网页应用，不联网，数据只存本机。</div>', [{ label: '关闭' }]) },
+  ],
+};
+let openMenu = null;
+$$('#menubar .menu').forEach(m => m.addEventListener('click', e => {
+  e.stopPropagation();
+  const key = m.dataset.menu; const dd = $('#dd');
+  if (openMenu === key) { dd.classList.remove('open'); openMenu = null; return; }
+  openMenu = key;
+  dd.innerHTML = '';
+  MENUS[key].forEach(it => {
+    if (it.label === '-') { const s = document.createElement('div'); s.className = 'sep'; dd.appendChild(s); return; }
+    const d = document.createElement('div'); d.className = 'mi' + (it.dis ? ' dis' : '');
+    d.innerHTML = '<span>' + esc(it.label) + '</span>' + (it.key ? '<span class="k">' + it.key + '</span>' : '');
+    d.addEventListener('click', () => { dd.classList.remove('open'); openMenu = null; if (it.dis) { toast(it.dis); return; } it.fn && it.fn(); });
+    dd.appendChild(d);
+  });
+  const r = m.getBoundingClientRect(), bar = $('#menubar').getBoundingClientRect();
+  dd.style.left = (r.left - bar.left) + 'px'; dd.classList.add('open');
+}));
+document.addEventListener('click', e => { if (!e.target.closest('#menubar')) { $('#dd').classList.remove('open'); openMenu = null; } });
+
+function coordCheck() {
+  const seen = new Map(); const dups = [];
+  for (const c of S.coords) { const k = c.x + ',' + c.y; if (seen.has(k)) dups.push(c.ref + ' 与 ' + seen.get(k) + ' 重叠'); else seen.set(k, c.ref); }
+  const refCount = {}; S.coords.forEach(c => refCount[c.ref] = (refCount[c.ref] || 0) + 1);
+  const dupRefs = Object.entries(refCount).filter(([, n]) => n > 1).map(([r]) => r);
+  showDlg('坐标检查（重复/重叠）', `<div style="line-height:2">坐标总数 ${S.coords.length}<br>位置重叠：${dups.length ? '<br>' + dups.map(esc).join('<br>') : '无'}<br>位号重复：${dupRefs.length ? dupRefs.join(',') : '无'}</div>`, [{ label: '关闭' }]);
+  msg('坐标检查完成：重叠 ' + dups.length + '，位号重复 ' + dupRefs.length);
+}
+function findSameAction() {
+  const sel = selectedPrims().filter(p => p.prim.k === 'f');
+  if (!sel.length) { toast('先选中一个焊盘'); return; }
+  const t = sel[0]; const same = Core.findSamePads(t.layer.prims, t.prim);
+  S.sel.clear(); same.forEach(p => S.sel.add(t.layer.id + ':' + t.layer.prims.indexOf(p)));
+  msg('查找相同：同形状同尺寸焊盘 ' + same.length + ' 个（已选中，可在贴片数据页批量提取）'); refresh();
+}
+function rotSel(deg) { if (!S.selCoord) { toast('先选一个坐标'); return; } S.selCoord.rot = (S.selCoord.rot + deg) % 360; msg(S.selCoord.ref + ' 角度 → ' + S.selCoord.rot + '°'); refresh(); }
+function doAngleCorrect() {
+  const before = S.coords.map(c => c.rot);
+  const changes = Core.correctDirections(S.coords);
+  const first = changes[0];
+  msg(`方向校正完成：已校 ${changes.length}/${S.coords.length}` + (first ? `，如 ${first.ref} ${first.from}°→${first.to}°` : ''));
+  refresh();
+}
+function openPkgCheck() {
+  const bad = [];
+  for (const c of S.coords) {
+    const fromSpec = Core.pkgOfString(c.spec);
+    if (c.pkg && fromSpec && c.pkg !== fromSpec) bad.push({ c, why: '坐标封装 ' + c.pkg + ' ≠ BOM/规格 ' + fromSpec });
+    else if (!Core.COMPONENT_DB.some(d => d.pkg === (c.pkg || fromSpec))) { if (c.spec) bad.push({ c, why: '封装 ' + (c.pkg || fromSpec || '未知') + ' 不在元件库' }); }
+  }
+  const body = showDlg('封装检查', bad.length ? '<table><thead><tr><th>位号</th><th>问题</th></tr></thead><tbody>' + bad.map((b, i) => `<tr data-pkg="${i}"><td>${esc(b.c.ref)}</td><td>${esc(b.why)}</td></tr>`).join('') + '</tbody></table><div class="note">点行跳画布定位</div>' : '<div class="note">检查通过：无封装不一致</div>', [{ label: '关闭' }], true);
+  body.querySelectorAll('[data-pkg]').forEach(tr => tr.addEventListener('click', () => { const c = bad[+tr.dataset.pkg].c; S.selCoord = c; S.view.cx = c.x; S.view.cy = c.y; closeDlg(); refresh(); }));
+  msg('封装检查：不一致 ' + bad.length + ' 条');
+}
+
+/* ---------- 工具栏 ---------- */
+$('#tbGerber').addEventListener('click', () => $('#fileGerber').click());
+$('#tbAlign').addEventListener('click', () => doAlign(false));
+$('#tbExtract').addEventListener('click', e => { S.extractMode = !S.extractMode; e.target.classList.toggle('on', S.extractMode); msg('坐标提取 ' + (S.extractMode ? '开' : '关')); });
+$('#tbFindSame').addEventListener('click', findSameAction);
+$('#tbRange').addEventListener('click', e => { e.target.classList.toggle('on'); msg('提取范围：在画布拖框即限定提取区域，框选后用贴片数据页的批量提取'); });
+$('#tbSilk').addEventListener('click', () => openSilkDlg(S.selCoord));
+$('#tbCad').addEventListener('click', () => $('#fileCad').click());
+$('#tbMerge').addEventListener('click', openMergeDlg);
+$('#tbAngle').addEventListener('click', doAngleCorrect);
+$('#tbPkg').addEventListener('click', openPkgCheck);
+$('#tbPanel').addEventListener('click', () => { smartPanel(); S.activeTab = 'board'; $$('#tabs .tab').forEach(x => x.classList.toggle('on', x.dataset.tab === 'board')); renderTab(); });
+$('#tbStencil').addEventListener('click', e => {
+  const r = e.target.getBoundingClientRect();
+  showCtx(r.left, r.bottom + 4, [
+    { label: '钢网开口编辑（缩放）', fn: openApertureDlg },
+    { label: 'IPC 合规判定', fn: openIpcDlg },
+    { label: '处理明细（8 步流程）', fn: openProcessDetailDlg },
+    { label: '钢网产物套件导出（.gxo/.gxp/.gxs）', fn: openStencilSuiteDlg },
+    { label: '导出钢网 Gerber', fn: () => OUTPUTS.find(o => o.label.includes('钢网 Gerber')).fn() },
+    { label: '位号坐标导出（三档匹配）', fn: () => OUTPUTS.find(o => o.label.includes('位号坐标')).fn() },
+  ]);
+});
+$('#tbReadProg').addEventListener('click', () => toast('本期未做：读取程序（格式证据不足，见未做清单）'));
+$('#tbOutput').addEventListener('click', e => { const r = e.target.getBoundingClientRect(); showCtx(r.left, r.bottom + 4, OUTPUTS); });
+$('#tbRotate').addEventListener('click', () => rotSel(90));
+$('#tbMirror').addEventListener('click', () => { if (!S.selCoord) { toast('先选一个坐标'); return; } S.selCoord.x = Core.round3(S.board.w - S.selCoord.x); msg(S.selCoord.ref + ' 已镜像 X'); refresh(); });
+$('#tbSide').addEventListener('click', e => { S.side = S.side === 'T' ? 'B' : 'T'; e.target.textContent = S.side; msg('当前面别 ' + S.side); });
+$('#tbConvert').addEventListener('click', () => {
+  const body = showDlg('转换坐标（整体）', `
+    <div class="kv"><span>平移 X</span><input type="number" id="cvDX" step="0.1" value="0"><span>平移 Y</span><input type="number" id="cvDY" step="0.1" value="0"></div>
+    <div class="kv"><span>旋转 °</span><input type="number" id="cvRot" value="0"><span>镜像 X</span><input type="checkbox" id="cvMX"></div>
+    <div class="kv2"><span>范围</span><select id="cvScope"><option value="sel">仅选中坐标</option><option value="all">全部坐标</option></select></div>`,
+    [{ label: '取消' }, { label: '应用', cls: 'acc', fn: () => {
+      const dx = +body.querySelector('#cvDX').value || 0, dy = +body.querySelector('#cvDY').value || 0;
+      const rot = (+body.querySelector('#cvRot').value || 0) * Math.PI / 180, mx = body.querySelector('#cvMX').checked;
+      const targets = body.querySelector('#cvScope').value === 'all' ? S.coords : (S.selCoord ? [S.selCoord] : []);
+      for (const c of targets) {
+        let x = c.x + dx, y = c.y + dy;
+        if (rot) { const nx = x * Math.cos(rot) - y * Math.sin(rot), ny = x * Math.sin(rot) + y * Math.cos(rot); x = nx; y = ny; c.rot = (c.rot + +body.querySelector('#cvRot').value) % 360; }
+        if (mx) x = S.board.w - x;
+        c.x = Core.round3(x); c.y = Core.round3(y);
+      }
+      msg('坐标转换完成 ' + targets.length + ' 个'); refresh();
+    } }]);
+});
+$('#tbSample').addEventListener('click', loadSample);
+
+/* ---------- 文件导入 ---------- */
+async function addGerberText(name, text) {
+  const cls = Core.classifyLayer(name);
+  let parsed;
+  if (cls.kind === 'drill' || /\.drl$/i.test(name)) parsed = Core.parseDrill(text);
+  else parsed = Core.parseGerber(text, name);
+  const layer = { id: newLayerId(), name: (Core.KIND_CN[cls.kind] || '') + '-' + name, fileName: name, kind: cls.kind, side: cls.side, visible: true, color: Core.KIND_COLOR[cls.kind], prims: parsed.prims, error: parsed.prims.length ? null : (parsed.errors[0] || '解析失败') };
+  S.layers.push(layer);
+  /* 红胶勾选（设置页/套件导出）：导入锡膏层时按元件名分组取中心派生红胶层（细则口径见 Core.deriveGluePrims 注释） */
+  if (cls.kind === 'paste' && S.settings.glue) {
+    const glue = Core.deriveGluePrims(parsed.prims, { dia: S.settings.glueDia || 1.0 });
+    if (glue.length) S.layers.push({ id: newLayerId(), name: '红胶-' + name, fileName: name.replace(/\.[^.]*$/, '') + (cls.side === 'B' ? '.glub' : '.glu'), kind: 'glue', side: cls.side, visible: true, color: '#e5484d', prims: glue, error: null });
+  }
+  return layer;
+}
+/* 文本编码嗅探：EasyEDA 等国产工具导出的 BOM/坐标文件常是 UTF-16LE（带 BOM 头），
+   浏览器默认按 UTF-8 读会满屏空字符；先看 BOM 头再选编码，无头时含大量 NUL 也按 UTF-16 处理。 */
+function decodeSmart(data) {
+  const b = data instanceof Uint8Array ? data : new Uint8Array(data);
+  if (b.length >= 2 && b[0] === 0xFF && b[1] === 0xFE) return new TextDecoder('utf-16le').decode(b);
+  if (b.length >= 2 && b[0] === 0xFE && b[1] === 0xFF) return new TextDecoder('utf-16be').decode(b);
+  if (b.length >= 3 && b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF) return new TextDecoder('utf-8').decode(b);
+  let nul = 0; const n = Math.min(b.length, 200);
+  for (let i = 0; i < n; i++) if (b[i] === 0) nul++;
+  if (n > 20 && nul / n > 0.2) return new TextDecoder('utf-16le').decode(b);
+  return new TextDecoder('utf-8').decode(b);
+}
+async function readTextSmart(f) { return decodeSmart(new Uint8Array(await f.arrayBuffer())); }
+async function addZipBytes(bytes) {
+  const entries = await Core.unzip(bytes);
+  let n = 0;
+  for (const en of entries) {
+    if (/\/$/.test(en.name)) continue;
+    const base = en.name.split('/').pop();
+    if (!/\.(gtp|gts|gto|gtl|gko|gbl|gbs|gbo|gbp|ger|gbr|drl)$/i.test(base)) continue;
+    await addGerberText(base, decodeSmart(en.data)); n++;
+  }
+  return n;
+}
+$('#fileGerber').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  for (const f of files) {
+    if (/\.zip$/i.test(f.name)) await addZipBytes(new Uint8Array(await f.arrayBuffer()));
+    else await addGerberText(f.name, await readTextSmart(f));
+  }
+  S._imported = true;
+  S.activeLayerId = S.layers[S.layers.length - 1]?.id || null;
+  fitView(); refresh(); msg('已导入 ' + files.length + ' 个文件，共 ' + S.layers.length + ' 层');
+});
+$('#fileZip').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { const n = await addZipBytes(new Uint8Array(await f.arrayBuffer())); S._imported = true; fitView(); refresh(); msg('ZIP 已解开：导入 ' + n + ' 个层文件'); }
+  catch (err) { toast('ZIP 解开失败：' + err.message); }
+});
+$('#fileCad').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const r = Core.parseCAD(await readTextSmart(f));
+  if (r.error) { toast(r.error); return; }
+  S.cad = r.pts; S.cadOffset = { x: 0, y: 0 }; msg('CAD 已导入 ' + r.pts.length + ' 个点，可点「智能重合」对齐'); refresh();
+});
+async function readBomTableFile(f) {
+  if (/\.xlsx$/i.test(f.name)) return await Core.parseXLSX(new Uint8Array(await f.arrayBuffer()));
+  return Core.parseCSVText(await readTextSmart(f));
+}
+$('#fileBom').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { showBomTableDlg(await readBomTableFile(f)); } catch (err) { toast('BOM 读取失败：' + err.message); }
+});
+$('#fileProj').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { applyProject(Core.deserializeProject(await readTextSmart(f))); msg('工程已打开'); } catch (err) { toast('工程打开失败：' + err.message); }
+});
+/* PcbDoc 实验性入口：只做 OLE2/CFB 文件头校验 + 内部流目录列举，坐标解析未实现 */
+$('#filePcb').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const r = Core.inspectCFB(new Uint8Array(await f.arrayBuffer()));
+  if (!r.ok) { showDlg('PcbDoc 识别（实验性）', `<div class="note" style="color:#f87171">${esc(r.error)}</div><div class="note">已明确拒绝：该文件无法识别为 PcbDoc 容器，未做任何导入。</div>`, [{ label: '关闭' }]); return; }
+  showDlg('PcbDoc 识别（实验性）', `
+    <div class="note">${r.isPcbDoc ? '已识别为 Altium .PcbDoc（OLE2/CFB 容器，内部含 PcbDoc 对象存储）。' : '这是 OLE2/CFB 复合文件，但内部条目不像 .PcbDoc（未见 Pads6/Components6 等对象存储）。'}</div>
+    <div style="max-height:300px; overflow:auto"><table><thead><tr><th>内部条目</th><th>类型</th><th>大小 B</th></tr></thead><tbody>
+    ${r.entries.map(en => `<tr><td>${esc(en.name)}</td><td>${esc(en.type)}</td><td>${en.size}</td></tr>`).join('') || '<tr><td colspan=3 class="note">目录为空</td></tr>'}
+    </tbody></table></div>
+    <div class="note" style="color:#f0b429">实验性到此为止：本入口只完成文件头校验与内部流列举，<b>坐标/焊盘记录解析未实现</b>，不会把该文件导入为图层；如需坐标，请先在 Altium 里导出 Gerber/CAD 再导入。</div>`,
+    [{ label: '关闭' }], true);
+  msg('PcbDoc 实验性识别完成：' + r.entries.length + ' 个内部条目（未导入图层）');
+});
+function loadSample() {
+  const d = Core.buildSampleData();
+  applyProject({ name: '样例工程', layers: d.layers, coords: [], cad: d.cad, bomRows: [], board: d.board, marks: d.marks, markUse: d.markUse, panels: d.panels, settings: S.settings, codeLib: S.codeLib });
+  S._sampleBomTable = d.bomTable;
+  msg('样例工程已载入：点「BOM+CAD」导入样例 BOM，或在画布点焊盘提取坐标；样例 CAD 已带 1.5mm 偏移可测智能重合');
+  toast('样例已载入。样例 BOM 在「文件→导入 BOM」不可用时，可到 BOM+CAD 模块点导入并选此页内置样例', 10);
+  // 直接把样例 BOM 备好：点导入BOM时若无文件，用内置样例表
+  S.bomRows = Core.bomRowsFromTable(d.bomTable.slice(1), ['料号', '规格', '位置', '用量', '名称']);
+  runSimplify(); refresh();
+}
+
+/* ---------- 初始化 ---------- */
+(function init() {
+  try {
+    const saved = localStorage.getItem('xg-smt-proj');
+    if (saved) { applyProject(Core.deserializeProject(saved)); msg('已恢复上次工程（本机自动保存）'); return; }
+  } catch (e) { }
+  refresh(); msg('点「载入样例工程」或「导入Gerber」开始');
+})();
+</script>
+<script>(function(){var b=document.getElementById("themeToggle");if(!b)return;b.addEventListener("click",function(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);try{localStorage.setItem("mj-theme",n);}catch(e){}});})();</script>
+</body>
+</html>
